@@ -12,6 +12,9 @@
 // Of message components, the following will initially be dropped: 
 //    Type of message - handled by the running loop; direction (buy or sell) - maintained by the respective book maps; Price - dictates how each message is hashed anyway
 
+//---------------------------------------------------------------------------------------
+// GLOBAL OBJECT DEFINITIONS
+//---------------------------------------------------------------------------------------
 // So an order for a map will be structured as
 struct Order {                                      
     int OrderID;                         // First up since it needs to be used for cancellations and executions
@@ -19,25 +22,80 @@ struct Order {
     int size;
 };
 
+struct Detail {
+    int price;
+    int time;
+};
+
 // We create a map (ordered!) which uses prices as keys and vectors holding information about each 
 std::map<int, std::vector<Order>> buy;
 std::map<int, std::vector<Order>> sell;     
 
-// Then create a map (unordered!) which uses orderIDs as keys to quickly find which price point at which an order is contained in order to wipe it from the Orders vector
-std::unordered_map<int, int> ID_price_book;
+// Then create a map (unordered!) which uses orderIDs as keys to quickly find which price point at which an order is contained
+// as well as the time of order in order to quickly find order index by Binary search
+std::unordered_map<int, Detail> ID_price_book;
+
+//---------------------------------------------------------------------------------------
+// HELPER ALGORITHMS
+//---------------------------------------------------------------------------------------
+
+// A basic Binary Search algorithm, used for finding orders in vectors of the buy or sell side of the book in order to delete them (faster than linear search if a vector is obscenely long)
+// Returns index of the searched for item - currently uses the wrong methods lol
+int BinarySearch(std::vector<Order>* priceVector, int time){
+    int left = 0;
+    int right = priceVector->size() - 1;
+
+    // TODO: USE THE RIGHT METHODS
+    while(left < right){
+        if (priceVector[left].time == time)     {return left;}
+        if (priceVector[right].time == time)    {return right;}
+
+        int mid = left + (left+right)/2;
+
+        if (priceVector[mid].time == time)      {return mid;}
+
+        else if (priceVector[mid].time < time)  {left = mid + 1;}
+        else                                    {right = mid - 1;}
+    }
+    
+    // If this happens, there was some kinda problem - either the order has already been cancelled, the order was cancelled or the binary search just failed.
+    return -1;
+}
+
+
+//---------------------------------------------------------------------------------------
+// MAIN BOOK LOGIC ALGORITHMS
+//---------------------------------------------------------------------------------------
 
 // If 1, then successful, if -1 then something failed
 int insertOrder(std::string direction, int price, int orderID, int size, int time) {
-    Order newOrder{orderID, time, size}; 
-    buy[price].push_back(newOrder);
-    ID_price_book[orderID] = price;
+    // Create and insert the orders into the correct maps
+    Order newOrder{orderID, time, size};
+    if(direction == "1")   {buy[price].push_back(newOrder);}
+    else                   {sell[price].push_back(newOrder);}
+
+    // The details are inserted the same way regardless of direction
+    Detail details{price, time};
+    ID_price_book[orderID] = details;
     return 1;
 }
 
 // If 1, then successful, if -1 then something failed
 // Direction tells us which map to check, price tells us which key, orderID tells us what to search for and cancel, size dictates if it's a partial deletion or not?
 // I will decide if this is correct or not later when I 
-int cancelOrder(std::string direction, int price, int orderID, int size) {
+int cancelOrder(std::string direction, int orderID, int size) {
+    int price = ID_price_book[orderID].price;
+    int time = ID_price_book[orderID].time;
+
+    
+    // I want to save a reference point to the vector in buy or sell price don't I? Would make things faster... I'll learn how to implement this with pointers later
+    std::vector<Order> *priceVector;
+   
+    if(direction == "1")   {priceVector = &buy[price];}
+    else                   {priceVector = &sell[price];}
+
+    // Now, complete a Binary Search for the index before operating
+    int id = BinarySearch(priceVector, time);
     
     return 1;
 }
@@ -45,6 +103,10 @@ int cancelOrder(std::string direction, int price, int orderID, int size) {
 int executeOrder() {
     
 }
+
+//---------------------------------------------------------------------------------------
+// MAIN METHOD
+//---------------------------------------------------------------------------------------
 
 int main() {
     // Not sure what a "good" method for filereading is, so I'm just gonna do "a" method
