@@ -8,6 +8,8 @@
 #include <fstream>
 #include <sstream>
 
+// g++ -O3 -o book.exe book.cpp
+
 // Should hopefully make things easier
 // Of message components, the following will initially be dropped: 
 //    Type of message - handled by the running loop; direction (buy or sell) - maintained by the respective book maps; Price - dictates how each message is hashed anyway
@@ -18,13 +20,13 @@
 // So an order for a map will be structured as
 struct Order {                                      
     int OrderID;                         // First up since it needs to be used for cancellations and executions
-    int time;
+    double time;                          // Time has decimal points to increase accuracy
     int size;
 };
 
 struct Detail {
     int price;
-    int time;
+    double time;
 };
 
 // We create a map (ordered!) which uses prices as keys and vectors holding information about each 
@@ -41,20 +43,25 @@ std::unordered_map<int, Detail> ID_price_book;
 
 // A basic Binary Search algorithm, used for finding orders in vectors of the buy or sell side of the book in order to delete them (faster than linear search if a vector is obscenely long)
 // Returns index of the searched for item - currently uses the wrong methods lol
-int BinarySearch(std::vector<Order>* priceVector, int time){
+int BinarySearch(const std::vector<Order>* priceVector, double time){
+    if (priceVector == nullptr || priceVector->empty()) {
+        return -1;
+    }
+
     int left = 0;
     int right = priceVector->size() - 1;
 
+    if (priceVector->at(left).time == time)     {return left;}
+    if (priceVector->at(right).time == time)    {return right;}
+
     // TODO: USE THE RIGHT METHODS
-    while(left < right){
-        if (priceVector[left].time == time)     {return left;}
-        if (priceVector[right].time == time)    {return right;}
+    while(left <= right){
 
-        int mid = left + (left+right)/2;
+        int mid = left + (right - left)/2;
+        double midTime = priceVector->at(mid).time;
 
-        if (priceVector[mid].time == time)      {return mid;}
-
-        else if (priceVector[mid].time < time)  {left = mid + 1;}
+        if (midTime == time)                    {return mid;}
+        else if (midTime < time)                {left = mid + 1;}
         else                                    {right = mid - 1;}
     }
     
@@ -68,7 +75,7 @@ int BinarySearch(std::vector<Order>* priceVector, int time){
 //---------------------------------------------------------------------------------------
 
 // If 1, then successful, if -1 then something failed
-int insertOrder(std::string direction, int price, int orderID, int size, int time) {
+int insertOrder(std::string direction, int price, int orderID, int size, double time) {
     // Create and insert the orders into the correct maps
     Order newOrder{orderID, time, size};
     if(direction == "1")   {buy[price].push_back(newOrder);}
@@ -85,7 +92,7 @@ int insertOrder(std::string direction, int price, int orderID, int size, int tim
 // I will decide if this is correct or not later when I 
 int cancelOrder(std::string direction, int orderID, int size) {
     int price = ID_price_book[orderID].price;
-    int time = ID_price_book[orderID].time;
+    double time = ID_price_book[orderID].time;
 
     
     // I want to save a reference point to the vector in buy or sell price don't I? Would make things faster... I'll learn how to implement this with pointers later
@@ -101,7 +108,7 @@ int cancelOrder(std::string direction, int orderID, int size) {
 }
 
 int executeOrder() {
-    
+    return -1;
 }
 
 //---------------------------------------------------------------------------------------
@@ -115,16 +122,30 @@ int main() {
     // Get the CSV filename and then a variable 'line' which will hold each line of the file - I can already see how this'll scale to multithreading
     std::string file = "testData.csv";
     std::ifstream csv_file(file);
-    std::cout << "Dataset loaded from: " << file;
+    std::cout << "Dataset loaded from: " << file << "\n";
     std::string line;
     
+
+    // Binary Search by time testing ------------------------------------------------------------
+    std::vector<Order> tests = {Order{16113575, 34200.004241176, 18}, 
+                                Order{16113584, 34200.00426064, 18},
+                                Order{16113594, 34200.004447484, 18},
+                                Order{16120456, 34200.025551909, 18},
+                                Order{16120480, 34200.025579546, 18}};
+
+    std::vector<Order>* interim = &tests;
+
+    int id = BinarySearch(interim, 34200.025551909);
+    std::cout << "The index of order '" << interim->at(id).OrderID << "' is: " << id;
+    // End Testing ------------------------------------------------------------------------------
+
     // Read message rows and begin parsing + working 
     while (std::getline(csv_file, line)) {
         std::stringstream ss(line);
         std::string time_str, type, orderID_str, size_str, price_str, direction;
 
         // Read the message and complete conversions where necessary
-        std::getline(ss, time_str, ',');                                int time = std::stoi(time_str);
+        std::getline(ss, time_str, ',');                                double time = std::stod(time_str);
         std::getline(ss, type, ',');                                    // One digit, can remain as string
         std::getline(ss, orderID_str, ',');                             int orderID = std::stoi(orderID_str);           // If this is an int, checking for orderIDs should be leagues easier right?
         std::getline(ss, size_str, ',');                                int size = std::stoi(size_str);
@@ -139,12 +160,12 @@ int main() {
                 }
                 break;
             case '2':                                                   // Cancel Limit Orders (Partial Deletion)
-                if(!cancelOrder(direction, price, orderID, size)) {
+                if(!cancelOrder(direction, orderID, size)) {
                     std::cerr << "Error canceling order " << orderID  << std::endl;
                 }
                 break;
             case '3':                                                   // Cancel Limit Orders (Total Deletion) - There is a distinction between this and 2, I'll find out what it is soon
-                if(!cancelOrder(direction, price, orderID, size)) {
+                if(!cancelOrder(direction, orderID, size)) {
                     std::cerr << "Error canceling order " << orderID << std::endl;
                 }
                 break;
