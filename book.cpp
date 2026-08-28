@@ -68,6 +68,27 @@ int BinarySearch(const std::vector<Order>* priceVector, double time){
     return -1;
 }
 
+// Adapted from https://cplusplus.com/forum/general/211386, though I lowkey coulda did it myself
+// Allows for checking the structure of a map - should only be used for smaller testcases really
+std::string map_to_string(std::map<int,std::vector<Order>>  map) {
+    std::string output = "";
+    std::string convrt = "";
+    std::string result = "";
+
+	for (auto it = map.cbegin(); it != map.cend(); it++) {
+        
+        for(auto order : it->second){
+            convrt += " [id: " + std::to_string(order.OrderID) + ", sz: " + std::to_string(order.size) + ", tm: " + std::to_string(order.time) + "], ";
+        }
+
+		output += std::to_string(it->first) + ":" + (convrt) + "\n";
+	}
+	
+    // Not too sure what this does actually
+	result = output.substr(0, output.size() - 2 );
+	
+  return result;
+}
 
 //---------------------------------------------------------------------------------------
 // MAIN BOOK LOGIC ALGORITHMS
@@ -100,12 +121,12 @@ int cancelOrder(std::string direction, int orderID, int size, int TOTAL) {
     // Based on direction, look at either side of the book
     if(direction == "1") {
         // If the vector has a size of 1, then the order we are looking for is necessarily at index 0, so you can check immediately
-        if(buy[price].size() == 1 and (buy[price].at(0).size <= size or TOTAL))   {buy.erase(price); return 1;} 
+        if(buy[price].size() == 1 && (buy[price].at(0).size <= size || TOTAL))    {buy.erase(price); return 1;} 
         else                                                                      {priceVector = &buy[price];}
     }
 
     else {
-        if(sell[price].size() == 1 and sell[price].at(0).size <= size)            {sell.erase(price);} 
+        if(sell[price].size() == 1 && sell[price].at(0).size <= size)             {sell.erase(price);} 
         else                                                                      {priceVector = &sell[price];}
     }
 
@@ -116,7 +137,7 @@ int cancelOrder(std::string direction, int orderID, int size, int TOTAL) {
     if(priceVector->at(id).OrderID != orderID) {return -1;} 
 
     // If you have reached this point, the the element found is not the lone item in the price vector and so would not trigger erasing the whole key
-    if(priceVector->at(id).size <= size or TOTAL) {priceVector->erase(id); return 1;}
+    if(priceVector->at(id).size <= size || TOTAL) {priceVector->erase(priceVector->begin() + id); return 1;}
     else                                          {priceVector->at(id).size -= size; return 1;}
 
 
@@ -143,7 +164,7 @@ int main() {
     std::string line;
     
 
-    // Binary Search by time testing ------------------------------------------------------------
+    // Test Casing ------------------------------------------------------------
     std::vector<Order> tests = {Order{16113575, 34200.004241176, 18}, 
                                 Order{16113584, 34200.00426064, 18},
                                 Order{16113594, 34200.004447484, 18},
@@ -152,8 +173,24 @@ int main() {
 
     std::vector<Order>* interim = &tests;
 
+    std::cout << "----------------------------------------------------\n";
     int id = BinarySearch(interim, 34200.025551909);
-    std::cout << "The index of order '" << interim->at(id).OrderID << "' is: " << id;
+    std::cout << "Binary Search test - The index of order '" << interim->at(id).OrderID << "' is: " << id << "\n";
+
+    // Test insert order
+    for (auto order : tests) {
+        insertOrder("1", 10000000, order.OrderID, order.size, order.time);
+    }
+
+    // Visualise map and test insertion works as required
+    std::cout << "\n" << "Insertion test - The state of the map after order insertions is as follows: " << map_to_string(buy) << "\n";
+    std::cout << "----------------------------------------------------\n";
+    cancelOrder("1", 16113584, 6, 0);
+    cancelOrder("1", 16120456, 2, 1);
+
+    std::cout << "\n" << "Cancellation test - The state of the map after cancellations is as follows: " << map_to_string(buy) << "\n";
+    std::cout << "\n" << "If all is well, the order '16120456' should be missing from the above, and the order '16113584' should have 12 items, not 18.\n";
+    
     // End Testing ------------------------------------------------------------------------------
 
     // Read message rows and begin parsing + working 
