@@ -191,6 +191,17 @@ int main() {
     std::cout << "\n" << "Cancellation test - The state of the map after cancellations is as follows: " << map_to_string(buy) << "\n";
     std::cout << "\n" << "If all is well, the order '16120456' should be missing from the above, and the order '16113584' should have 12 items, not 18.\n";
     
+    std::cout << "----------------------------------------------------\n";
+
+    insertOrder("-1", 11100000, 16120457, 2, 34200.025579548);
+    insertOrder("-1", 11000000, 16120456, 2, 34200.025579547);
+
+    std::cout << "\n" << "sell map, 2 keys: " << map_to_string(sell) << "\n";
+    
+    cancelOrder("-1", 16120457, 0, 1);
+
+    std::cout << "\n" << "sell map, should print only 1 key: " << map_to_string(sell) << "\n";
+    
     // End Testing ------------------------------------------------------------------------------
 
     // Read message rows and begin parsing + working 
