@@ -54,7 +54,6 @@ int BinarySearch(const std::vector<Order>* priceVector, double time){
     if (priceVector->at(left).time == time)     {return left;}
     if (priceVector->at(right).time == time)    {return right;}
 
-    // TODO: USE THE RIGHT METHODS
     while(left <= right){
 
         int mid = left + (right - left)/2;
@@ -88,23 +87,41 @@ int insertOrder(std::string direction, int price, int orderID, int size, double 
 }
 
 // If 1, then successful, if -1 then something failed
-// Direction tells us which map to check, price tells us which key, orderID tells us what to search for and cancel, size dictates if it's a partial deletion or not?
+// Direction tells us which map to check, price tells us which key, orderID tells us what to search for and cancel, size dictates the amount to slime out and TOTAL decides if it's a partial or total deletion
 // I will decide if this is correct or not later when I 
-int cancelOrder(std::string direction, int orderID, int size) {
+int cancelOrder(std::string direction, int orderID, int size, int TOTAL) {
     int price = ID_price_book[orderID].price;
     double time = ID_price_book[orderID].time;
 
     
-    // I want to save a reference point to the vector in buy or sell price don't I? Would make things faster... I'll learn how to implement this with pointers later
-    std::vector<Order> *priceVector;
+    // I want to save a reference point to the vector in buy or sell price don't I? 
+    std::vector<Order>* priceVector;
    
-    if(direction == "1")   {priceVector = &buy[price];}
-    else                   {priceVector = &sell[price];}
+    // Based on direction, look at either side of the book
+    if(direction == "1") {
+        // If the vector has a size of 1, then the order we are looking for is necessarily at index 0, so you can check immediately
+        if(buy[price].size() == 1 and (buy[price].at(0).size <= size or TOTAL))   {buy.erase(price); return 1;} 
+        else                                                                      {priceVector = &buy[price];}
+    }
+
+    else {
+        if(sell[price].size() == 1 and sell[price].at(0).size <= size)            {sell.erase(price);} 
+        else                                                                      {priceVector = &sell[price];}
+    }
 
     // Now, complete a Binary Search for the index before operating
     int id = BinarySearch(priceVector, time);
-    
-    return 1;
+
+    // This should never reasonably happen due to the precision of given times, but it'd be good to catch it early if there is any issue
+    if(priceVector->at(id).OrderID != orderID) {return -1;} 
+
+    // If you have reached this point, the the element found is not the lone item in the price vector and so would not trigger erasing the whole key
+    if(priceVector->at(id).size <= size or TOTAL) {priceVector->erase(id); return 1;}
+    else                                          {priceVector->at(id).size -= size; return 1;}
+
+
+    // This shouldn't be reachable
+    return -1;
 }
 
 int executeOrder() {
@@ -160,22 +177,23 @@ int main() {
                 }
                 break;
             case '2':                                                   // Cancel Limit Orders (Partial Deletion)
-                if(!cancelOrder(direction, orderID, size)) {
+                if(!cancelOrder(direction, orderID, size, 0)) {
                     std::cerr << "Error canceling order " << orderID  << std::endl;
                 }
                 break;
-            case '3':                                                   // Cancel Limit Orders (Total Deletion) - There is a distinction between this and 2, I'll find out what it is soon
-                if(!cancelOrder(direction, orderID, size)) {
+            case '3':                                                   // Cancel Limit Orders (Total Deletion, set TOTAL to 1 and immediately erase)
+                if(!cancelOrder(direction, orderID, size, 1)) {
                     std::cerr << "Error canceling order " << orderID << std::endl;
                 }
                 break;
-            case '4':                                                   // Execute visible Orders - Effectively a market buy
-                break;
-            case '5':                                                   // Execute hidden Orders - This doesn't actually do anything w.r.t our book, hidden orders are ones we don't know about
+            //case '4':                                                   // Execute visible Orders - Effectively a market buy
+            //    break;
+            //case '5':                                                   // Execute hidden Orders - This doesn't actually do anything w.r.t our book, hidden orders are ones we don't know about
                 break;
             case '7':                                                   // Trading Halt
                 break;
         }
+
     }
     
     return 0;
