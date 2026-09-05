@@ -51,9 +51,6 @@ int BinarySearch(const std::vector<Order>* priceVector, double time){
     int left = 0;
     int right = priceVector->size() - 1;
 
-    if (priceVector->at(left).time == time)     {return left;}
-    if (priceVector->at(right).time == time)    {return right;}
-
     while(left <= right){
 
         int mid = left + (right - left)/2;
@@ -70,24 +67,29 @@ int BinarySearch(const std::vector<Order>* priceVector, double time){
 
 // Adapted from https://cplusplus.com/forum/general/211386, though I lowkey coulda did it myself
 // Allows for checking the structure of a map - should only be used for smaller testcases really
-std::string map_to_string(std::map<int,std::vector<Order>>  map) {
-    std::string output = "";
-    std::string convrt = "";
-    std::string result = "";
+std::string map_to_string(const std::map<int,std::vector<Order>>  &map) {
+    if(map.empty()) {return "";}
 
+    std::string output = "";
+    std::string result = "";
+    
 	for (auto it = map.cbegin(); it != map.cend(); it++) {
+        std::string convrt = "";
         
         for(auto order : it->second){
-            convrt += " [id: " + std::to_string(order.OrderID) + ", sz: " + std::to_string(order.size) + ", tm: " + std::to_string(order.time) + "], ";
+            convrt += " [id: " + std::to_string(order.OrderID) + 
+                      ", sz: " + std::to_string(order.size) + 
+                      ", tm: " + std::to_string(order.time) + "], ";
         }
 
-		output += std::to_string(it->first) + ":" + (convrt) + "\n";
+		output += std::to_string(it->first) + ":" + (convrt) + "\n-\n";
 	}
 	
-    // Not too sure what this does actually
-	result = output.substr(0, output.size() - 2 );
+    if (output.size() >= 3) {
+        output.resize(output.size() - 3);
+    }
 	
-  return result;
+  return output;
 }
 
 //---------------------------------------------------------------------------------------
@@ -121,7 +123,7 @@ int cancelOrder(std::string direction, int orderID, int size, int TOTAL) {
     // Based on direction, look at either side of the book
     if(direction == "1") {
         // If the vector has a size of 1, then the order we are looking for is necessarily at index 0, so you can check immediately
-        if(buy[price].size() == 1 && (buy[price].at(0).size <= size || TOTAL))    {buy.erase(price); return 1;} 
+        if(buy[price].size() == 1 && (buy[price].at(0).size <= size || TOTAL))    {buy.erase(price); ID_price_book.erase(orderID);return 1;} 
         else                                                                      {priceVector = &buy[price];}
     }
 
@@ -137,12 +139,18 @@ int cancelOrder(std::string direction, int orderID, int size, int TOTAL) {
     if(priceVector->at(id).OrderID != orderID) {return -1;} 
 
     // If you have reached this point, the the element found is not the lone item in the price vector and so would not trigger erasing the whole key
-    if(priceVector->at(id).size <= size || TOTAL) {priceVector->erase(priceVector->begin() + id); return 1;}
+    // Remember to wipe the orderID from ID-Detail map though
+    if(priceVector->at(id).size <= size || TOTAL) {priceVector->erase(priceVector->begin() + id); ID_price_book.erase(orderID); return 1;}
     else                                          {priceVector->at(id).size -= size; return 1;}
 
 
     // This shouldn't be reachable
     return -1;
+}
+
+// Check what the top of the book is at the time
+void refreshTop() {
+
 }
 
 int executeOrder() {
@@ -174,34 +182,39 @@ int main() {
     std::vector<Order>* interim = &tests;
 
     std::cout << "----------------------------------------------------\n";
+
     int id = BinarySearch(interim, 34200.025551909);
     std::cout << "Binary Search test - The index of order '" << interim->at(id).OrderID << "' is: " << id << "\n";
 
+    std::cout << "----------------------------------------------------\n";
     // Test insert order
     for (auto order : tests) {
         insertOrder("1", 10000000, order.OrderID, order.size, order.time);
     }
-
+    insertOrder("1", 11000000, 17113584, 10, 34200.025579546); // is duplicate ordering to do with insert logic?
     // Visualise map and test insertion works as required
-    std::cout << "\n" << "Insertion test - The state of the map after order insertions is as follows: " << map_to_string(buy) << "\n";
+    std::cout << "\n" << "Insertion test - The state of the map after order insertions is as follows: \n" << map_to_string(buy) << "\n";
+
+    std::cout << "\n" << "We then check the orderID map:\n";
+    for(const auto &[id, detail] : ID_price_book){
+        std::cout << "OrderID: " << id << " -> price: " << detail.price << "\n";
+    }
+
     std::cout << "----------------------------------------------------\n";
     cancelOrder("1", 16113584, 6, 0);
     cancelOrder("1", 16120456, 2, 1);
+    cancelOrder("1", 17113584, 0, 1);
 
-    std::cout << "\n" << "Cancellation test - The state of the map after cancellations is as follows: " << map_to_string(buy) << "\n";
+    std::cout << "\n" << "Cancellation test - The state of the map after cancellations is as follows: \n" << map_to_string(buy) << "\n";
     std::cout << "\n" << "If all is well, the order '16120456' should be missing from the above, and the order '16113584' should have 12 items, not 18.\n";
-    
-    std::cout << "----------------------------------------------------\n";
+    std::cout << "11100000 Should also be gone.\n";    
 
-    insertOrder("-1", 11100000, 16120457, 2, 34200.025579548);
-    insertOrder("-1", 11000000, 16120456, 2, 34200.025579547);
+    std::cout << "\n" << "We then check the, hopefully, updated orderID map:\n";
+    for(const auto &[id, detail] : ID_price_book){
+        std::cout << "OrderID: " << id << " -> price: " << detail.price << "\n";
+    }
 
-    std::cout << "\n" << "sell map, 2 keys: " << map_to_string(sell) << "\n";
-    
-    cancelOrder("-1", 16120457, 0, 1);
-
-    std::cout << "\n" << "sell map, should print only 1 key: " << map_to_string(sell) << "\n";
-    
+    std::cout << "----------------------------------------------------";
     // End Testing ------------------------------------------------------------------------------
 
     // Read message rows and begin parsing + working 
@@ -241,6 +254,8 @@ int main() {
             case '7':                                                   // Trading Halt
                 break;
         }
+
+        // Refresh the top of the book
 
     }
     
