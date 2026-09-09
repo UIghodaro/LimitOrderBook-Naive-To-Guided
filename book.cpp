@@ -37,6 +37,7 @@ std::map<int, std::vector<Order>> sell;
 // as well as the time of order in order to quickly find order index by Binary search
 std::unordered_map<int, Detail> ID_price_book;
 
+
 //---------------------------------------------------------------------------------------
 // HELPER ALGORITHMS
 //---------------------------------------------------------------------------------------
@@ -96,10 +97,79 @@ std::string map_to_string(const std::map<int,std::vector<Order>>  &map) {
 // MAIN BOOK LOGIC ALGORITHMS
 //---------------------------------------------------------------------------------------
 
-// If 1, then successful, if -1 then something failed
+// Main logic:
+// 1. If an order doesn't meet execute conditions, return 1 and exit (don't modify the order, no execution)
+// 2. If an order DOES meet execute conditions, begin execution:
+//      - If the order is fully executed, return -1 -> the Order itself should not be stored anywhere and will be erased by the GC later
+//      - If the order is not fully executed, the order size is mutated
+bool executeOrder(Order &ord, int price, std::string direction) {
+    if(direction == "1") {
+        if (sell.empty() || price < sell.begin()->first) {
+        return true; 
+        }
+
+        if(price > sell.begin()->first){
+            // Prevent invalid sizes and attempting to find the beginning of a map that is empty, also allow for updating the map
+            while(ord.size > 0 && !sell.empty() && price >= sell.begin()->first){
+                auto &[cheapestSell, orders] = *sell.begin();                   // Store a reference the front key-value pair
+                
+                while(!orders.empty()) {
+                    Order &nextOrder = orders.front();
+
+                    // It is faster to directly erase since we already have a pointer to the front
+                    if(nextOrder.size < ord.size) {ord.size -= nextOrder.size; orders.erase(orders.begin());}
+
+                    // Avoid size 0 orders in the order queue
+                    else if(nextOrder.size == ord.size) {orders.erase(orders.begin()); return false;}
+
+                    // If the order is satisfied however, just update the front of the top of the map and then end
+                    else                      {nextOrder.size -= ord.size; return false;}                   
+                }
+                
+                // If you made it here, then the price point is empty and you need to move up or end execution
+                sell.erase(sell.begin());
+            }
+        }
+    }
+
+    else {
+        if (buy.empty() || price < buy.rbegin()->first) {
+        return true; 
+        }
+
+        if(price > buy.rbegin()->first){
+            while(ord.size > 0 && !buy.empty() && price >= buy.rbegin()->first){
+                auto &[cheapestBuy, orders] = *buy.rbegin();                   
+                
+                while(!orders.empty()) {
+                    Order &nextOrder = orders.front();
+
+                    if(nextOrder.size < ord.size) {ord.size -= nextOrder.size; orders.erase(orders.begin());}
+                    else if(nextOrder.size == ord.size) {orders.erase(orders.begin()); return false;}
+                    else                      {nextOrder.size -= ord.size; return false;}                   
+                }
+                
+                buy.erase(std::prev(buy.end()));
+            }
+        }
+    }
+    return true;
+}
+
+// Main logic:
+// 1. [outside of function]: Is this an executable order? IF YES then execute, ELSE (or if unsatisfied) then insert
+// 2. [Inside of function]: Is the top of book changed? IF YES then change the top of book, ELSE continue
+// 3. [Inside of function]: Insert what has remained from the first check - return 1 if successful
 int insertOrder(std::string direction, int price, int orderID, int size, double time) {
-    // Create and insert the orders into the correct maps
+    
+    // Create the order 
     Order newOrder{orderID, time, size};
+
+    // The below line will either:
+    //  1. Fully execute the order, then immediately return  OR
+    //  2. Mutate the order (partial execution) or leave it as is, then continue insertion using the remaining order 
+    if(!executeOrder(newOrder, price, direction)) {return 1;}
+
     if(direction == "1")   {buy[price].push_back(newOrder);}
     else                   {sell[price].push_back(newOrder);}
 
@@ -128,7 +198,7 @@ int cancelOrder(std::string direction, int orderID, int size, int TOTAL) {
     }
 
     else {
-        if(sell[price].size() == 1 && sell[price].at(0).size <= size)             {sell.erase(price);} 
+        if(sell[price].size() == 1 && (sell[price].at(0).size <= size || TOTAL))             {sell.erase(price);} 
         else                                                                      {priceVector = &sell[price];}
     }
 
@@ -145,15 +215,6 @@ int cancelOrder(std::string direction, int orderID, int size, int TOTAL) {
 
 
     // This shouldn't be reachable
-    return -1;
-}
-
-// Check what the top of the book is at the time
-void refreshTop() {
-
-}
-
-int executeOrder() {
     return -1;
 }
 
