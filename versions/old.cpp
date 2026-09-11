@@ -229,7 +229,7 @@ int main() {
     // Initially, I left getting and parsing a message in an entirely different function, but using it in main allows me to complete necessary conversions immediately and reduces GOTO overhead
 
     // Get the CSV filename and then a variable 'line' which will hold each line of the file - I can already see how this'll scale to multithreading
-    std::string file = "data/SynthTest.csv";
+    std::string file = "Test.csv";
     std::ifstream csv_file(file);
     std::cout << "Dataset loaded from: " << file << "\n";
     std::string line;
@@ -320,7 +320,7 @@ int main() {
                 if(!insertOrder(direction, price, orderID, size, time)) {
                     std::cerr << "Error inserting order " << orderID  << std::endl;
                 } else {
-                    std::cout << "Fill - ORDER: " << orderID << " with PRICE: " << price << " and SIZE: " << size << "to MAP: " << direction <<"\n";
+                    std::cout << "Fill - ORDER: " << orderID << " with PRICE: " << price << " and SIZE: " << size << " to MAP: " << direction <<"\n";
                 }
                 break;
             case '2':                                                   // Cancel Limit Orders (Partial Deletion)

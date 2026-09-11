@@ -19,3 +19,9 @@
 - The top of book should not be refreshed upon every insertion or cancellation, that waste of maybe 1 timestep adds up very quickly. \
 It should also not be handled any time a cancellation results in the removal of a price point. \
 **The top of book should only change when the top of book is needed, right?** - *This is necessarily only when an order is inserted and if executions are currently underway*
+- Test.csv: \
+-- Rows 1-6 fill the book to a nice rest (both books, 3 price levels, 1 item per level) \
+-- Rows 7-8 test total and partial cancels
+-- row 9-11 Switching up resting prices
+-- row 12 Increase price vector to 2
+-- row 13-14 Test price-time priority 
