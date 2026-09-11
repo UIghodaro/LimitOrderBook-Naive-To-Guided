@@ -9,6 +9,7 @@
 #include <sstream>
 
 // g++ -O3 -o book.exe book.cpp
+// g++ -O3 -o book.out book.cpp
 
 // Should hopefully make things easier
 // Of message components, the following will initially be dropped: 
@@ -104,11 +105,12 @@ std::string map_to_string(const std::map<int,std::vector<Order>>  &map) {
 //      - If the order is not fully executed, the order size is mutated
 bool executeOrder(Order &ord, int price, std::string direction) {
     if(direction == "1") {
+        // If there is nothing to potentially execute on or execute conditions are just not met, then leave the order as is and continue
         if (sell.empty() || price < sell.begin()->first) {
         return true; 
         }
 
-        if(price > sell.begin()->first){
+        if(price >= sell.begin()->first){
             // Prevent invalid sizes and attempting to find the beginning of a map that is empty, also allow for updating the map
             while(ord.size > 0 && !sell.empty() && price >= sell.begin()->first){
                 auto &[cheapestSell, orders] = *sell.begin();                   // Store a reference the front key-value pair
@@ -117,10 +119,10 @@ bool executeOrder(Order &ord, int price, std::string direction) {
                     Order &nextOrder = orders.front();
 
                     // It is faster to directly erase since we already have a pointer to the front
-                    if(nextOrder.size < ord.size) {ord.size -= nextOrder.size; orders.erase(orders.begin());}
+                    if(nextOrder.size < ord.size) {ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
 
                     // Avoid size 0 orders in the order queue
-                    else if(nextOrder.size == ord.size) {orders.erase(orders.begin()); return false;}
+                    else if(nextOrder.size == ord.size) {ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); return false;}
 
                     // If the order is satisfied however, just update the front of the top of the map and then end
                     else                      {nextOrder.size -= ord.size; return false;}                   
@@ -133,19 +135,19 @@ bool executeOrder(Order &ord, int price, std::string direction) {
     }
 
     else {
-        if (buy.empty() || price < buy.rbegin()->first) {
+        if (buy.empty() || price > buy.rbegin()->first) {
         return true; 
         }
 
-        if(price > buy.rbegin()->first){
-            while(ord.size > 0 && !buy.empty() && price >= buy.rbegin()->first){
+        if(price <= buy.rbegin()->first){
+            while(ord.size > 0 && !buy.empty() && price <= buy.rbegin()->first){
                 auto &[cheapestBuy, orders] = *buy.rbegin();                   
                 
                 while(!orders.empty()) {
                     Order &nextOrder = orders.front();
 
-                    if(nextOrder.size < ord.size) {ord.size -= nextOrder.size; orders.erase(orders.begin());}
-                    else if(nextOrder.size == ord.size) {orders.erase(orders.begin()); return false;}
+                    if(nextOrder.size < ord.size) {ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
+                    else if(nextOrder.size == ord.size) {ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); return false;}
                     else                      {nextOrder.size -= ord.size; return false;}                   
                 }
                 
@@ -193,12 +195,12 @@ int cancelOrder(std::string direction, int orderID, int size, int TOTAL) {
     // Based on direction, look at either side of the book
     if(direction == "1") {
         // If the vector has a size of 1, then the order we are looking for is necessarily at index 0, so you can check immediately
-        if(buy[price].size() == 1 && (buy[price].at(0).size <= size || TOTAL))    {buy.erase(price); ID_price_book.erase(orderID);return 1;} 
+        if(buy[price].size() == 1 && (TOTAL ||buy[price].at(0).size <= size))    {buy.erase(price); ID_price_book.erase(orderID);return 1;} 
         else                                                                      {priceVector = &buy[price];}
     }
 
     else {
-        if(sell[price].size() == 1 && (sell[price].at(0).size <= size || TOTAL))             {sell.erase(price);} 
+        if(sell[price].size() == 1 && (TOTAL || sell[price].at(0).size <= size))  {sell.erase(price); ID_price_book.erase(orderID);return 1;} 
         else                                                                      {priceVector = &sell[price];}
     }
 
@@ -210,7 +212,7 @@ int cancelOrder(std::string direction, int orderID, int size, int TOTAL) {
 
     // If you have reached this point, the the element found is not the lone item in the price vector and so would not trigger erasing the whole key
     // Remember to wipe the orderID from ID-Detail map though
-    if(priceVector->at(id).size <= size || TOTAL) {priceVector->erase(priceVector->begin() + id); ID_price_book.erase(orderID); return 1;}
+    if(TOTAL || priceVector->at(id).size <= size) {priceVector->erase(priceVector->begin() + id); ID_price_book.erase(orderID); return 1;}
     else                                          {priceVector->at(id).size -= size; return 1;}
 
 
@@ -227,12 +229,12 @@ int main() {
     // Initially, I left getting and parsing a message in an entirely different function, but using it in main allows me to complete necessary conversions immediately and reduces GOTO overhead
 
     // Get the CSV filename and then a variable 'line' which will hold each line of the file - I can already see how this'll scale to multithreading
-    std::string file = "testData.csv";
+    std::string file = "data/SynthTest.csv";
     std::ifstream csv_file(file);
     std::cout << "Dataset loaded from: " << file << "\n";
     std::string line;
     
-
+    /*
     // Test Casing ------------------------------------------------------------
     std::vector<Order> tests = {Order{16113575, 34200.004241176, 18}, 
                                 Order{16113584, 34200.00426064, 18},
@@ -276,7 +278,28 @@ int main() {
     }
 
     std::cout << "----------------------------------------------------";
+    std::cout << "\n" << "Execution test - we add a sell order of price 10000000 with size 30.\n";
+    insertOrder("-1", 10000000, 17113585, 30, 35200.025579546);
+    std::cout << "\n" << "The resulting BUY map is: \n" << map_to_string(buy) << "\n";
+
+    std::cout << "\n" << "Orders 16113575 and 16113584 should be gone by price-time priority, see orderID map:\n";
+    for(const auto &[id, detail] : ID_price_book){
+        std::cout << "OrderID: " << id << " -> price: " << detail.price << "\n";
+    }
+
+    insertOrder("-1", 10000000, 17113586, 10, 35300.025579546);
+    std::cout << "-\n" << "Then selling undersize: \n" << map_to_string(buy) << "\n";
+    insertOrder("-1", 10000000, 17113587, 10, 35400.025579546);
+    std::cout << "-\n" << "Then selling oversize, not equal: \n" << map_to_string(buy) << "\n";
+    insertOrder("-1", 11000000, 17113588, 30, 35600.025579546);
+    std::cout << "-\n" << "Then selling too expensive: \n-Buy map:\n" << map_to_string(buy) << "\n-Sell map:\n" << map_to_string(sell) <<"\n";
+    insertOrder("1", 11000000, 17113589, 12, 35700.025579546);
+    std::cout << "-\n" << "Adding buy offer to check logic carries: \n-Buy map:\n" << map_to_string(buy) << "\n-Sell map:\n" << map_to_string(sell) <<"\n";
+
+    std::cout << "----------------------------------------------------\n";
+
     // End Testing ------------------------------------------------------------------------------
+    */
 
     // Read message rows and begin parsing + working 
     while (std::getline(csv_file, line)) {
@@ -296,16 +319,22 @@ int main() {
             case '1':                                                   // New Limit Order
                 if(!insertOrder(direction, price, orderID, size, time)) {
                     std::cerr << "Error inserting order " << orderID  << std::endl;
+                } else {
+                    std::cout << "Fill - ORDER: " << orderID << " with PRICE: " << price << " and SIZE: " << size << "to MAP: " << direction <<"\n";
                 }
                 break;
             case '2':                                                   // Cancel Limit Orders (Partial Deletion)
                 if(!cancelOrder(direction, orderID, size, 0)) {
                     std::cerr << "Error canceling order " << orderID  << std::endl;
+                } else {
+                    std::cout << "Cancel - ORDER: " << orderID << " with SIZE: " << size << " on MAP: " << direction <<"\n";
                 }
                 break;
             case '3':                                                   // Cancel Limit Orders (Total Deletion, set TOTAL to 1 and immediately erase)
                 if(!cancelOrder(direction, orderID, size, 1)) {
                     std::cerr << "Error canceling order " << orderID << std::endl;
+                } else {
+                    std::cout << "Total Cancel - ORDER: " << orderID << " on MAP: " << direction <<"\n";
                 }
                 break;
             //case '4':                                                   // Execute visible Orders - Effectively a market buy
@@ -318,6 +347,7 @@ int main() {
 
         // Refresh the top of the book
 
+        std::cout << "-----------------\n" << "-Buy map:\n" << map_to_string(buy) << "\n\n-Sell map:\n" << map_to_string(sell) <<"\n-----------------\n";
     }
     
     return 0;
