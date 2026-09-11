@@ -13,6 +13,10 @@ int  main() {
 
     LOBV1 book;
 
+    std::string file = "versions/Test.csv";
+    std::ifstream csv_file(file);
+    std::cout << "Dataset loaded from: " << file << "\n";
+    std::string line;
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -64,5 +68,8 @@ int  main() {
     //---------------------------------------------------------------------------------------
 
     auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double,std::milli> elapsed = end-start;
+    std::cout << "Time elapsed: " << elapsed.count() << "ms\n";
     return 0;
 }
