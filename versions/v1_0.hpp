@@ -23,33 +23,34 @@ struct Detail {
 
 class LOBV1 {
     private:
-        std::map<int, std::vector<Order>> buy;
-        std::map<int, std::vector<Order>> sell;     
-
-        std::unordered_map<int, Detail> ID_price_book;
-
-        int BinarySearch(const std::vector<Order>* priceVector, double time){
-            if (priceVector == nullptr || priceVector->empty()) {
-                return -1;
-            }
-
-            int left = 0;
-            int right = priceVector->size() - 1;
-
-            while(left <= right){
-
-                int mid = left + (right - left)/2;
-                double midTime = priceVector->at(mid).time;
-
-                if (midTime == time)                    {return mid;}
+    std::map<int, std::vector<Order>> buy;
+    std::map<int, std::vector<Order>> sell;
+    
+    std::unordered_map<int, Detail> ID_price_book;
+    
+    int BinarySearch(const std::vector<Order>* priceVector, double time){
+        if (priceVector == nullptr || priceVector->empty()) {
+            return -1;
+        }
+        
+        int left = 0;
+        int right = priceVector->size() - 1;
+        
+        while(left <= right){
+            
+            int mid = left + (right - left)/2;
+            double midTime = priceVector->at(mid).time;
+            
+            if (midTime == time)                        {return mid;}
                 else if (midTime < time)                {left = mid + 1;}
                 else                                    {right = mid - 1;}
             }
             
             return -1;
         }
+        
+        public:
 
-    public:
         bool executeOrder(Order &ord, int price, std::string direction) {
             if(direction == "1") {
                 if (sell.empty() || price < sell.begin()->first) {
@@ -130,7 +131,7 @@ class LOBV1 {
 
             int id = BinarySearch(priceVector, time);
 
-            if(priceVector->at(id).OrderID != orderID) {return -1;} 
+            if(id == -1 || priceVector->at(id).OrderID != orderID) {return -1;} 
 
             if(TOTAL || priceVector->at(id).size <= size) {priceVector->erase(priceVector->begin() + id); ID_price_book.erase(orderID); return 1;}
             else                                          {priceVector->at(id).size -= size; return 1;}
