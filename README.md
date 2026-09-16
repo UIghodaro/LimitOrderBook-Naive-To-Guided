@@ -3,11 +3,17 @@
 # For Mac/Linux
 g++ -O3 -o benchmark.out benchmark.cpp
 ./benchmark.out
+
+# Verbose compilation argument
+g++ -DVERBOSE -O3 -o benchmark.out benchmark.cpp
 ```
 ```bash
 # For windows
 g++ -O3 -o benchmark.exe benchmark.cpp
 ./benchmark.exe
+
+# Verbose compilation argument
+g++ -DVERBOSE -O3 -o benchmark.exe benchmark.cpp
 ```
 # Quick Note: Benchmark.cpp
 I was deciding how to create a good set of synthetic datapoints, I initially thought "random points in a range is too shallow, a random walk/brownian motion would just go to + or - infinity - do we just map the stocks using a distribution? Like generate price points using N~(1000, sigma) for some sigma. Apparently that's worse cause given enough datapoints, you'll never end up with an empty price level - which intuitively makes sense. \
@@ -33,3 +39,11 @@ As such, we design the message generator as follows:
 2. Use this random number in 2 ways - add a scaled form of it to the ``time`` and to determine order ``size``; also use it as a seed which generates: Probability `x` for ``insert/cancel (type)``, probability `y` for order ``aggressiveness``, probability `z` for order ``direction``
 3. Probability `x` decides if an order should be an insert or cancel, probability `y` decides if the 
 4. Probability `x` is informed by a data structure holding the set of current open orders - if probability `x` surpasses a threshold and there are open orders, then one of the existing orders will be selected at random for partial or total deletion, which is again decided on an internal threshold on `x`
+
+
+- Test.csv: \
+-- Rows 1-6 fill the book to a nice rest (both books, 3 price levels, 1 item per level) \
+-- Rows 7-8 test total and partial cancels
+-- row 9-11 Switching up resting prices
+-- row 12 Increase price vector to 2
+-- row 13-14 Test price-time priority 

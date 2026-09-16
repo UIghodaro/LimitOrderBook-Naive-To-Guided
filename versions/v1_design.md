@@ -2,6 +2,7 @@
 
 ## Handling insertion
 - straightforward, do via maps
+- **Issue:** Ordered maps have O(log n) insertion, I'm now finding. That's kinda ludicrous bro
 ## Handling cancellation
 - How do we cancel effectively?
 - Need: **fast access** to the correct price holding the order specified, **fast finding** of the index of the orderID and then **fast deletion** of said order

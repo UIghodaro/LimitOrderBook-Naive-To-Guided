@@ -4,27 +4,37 @@
 #include <vector>
 #include <set>
 #include <chrono>
+#include <algorithm>
+
+#include "utils/Logging.hpp"
+#include "utils/Utilities.hpp"
 
 #include "versions/v1_0.hpp"
-#include "Utilities.hpp"
+
 
 
 int  main() {
     //---------------------------------------------------------------------------------------
     // INITIALISING
     //---------------------------------------------------------------------------------------
+    int numMessages = 1'000'000;
+    std::cout << "Generating messages...";
+    auto messageQ = Utils::generateSyntheticMessages(numMessages, 42);
+    std::cout<< "\n---\nMessages Generated.\n";
 
-    auto messageQ = Utils::generateSyntheticMessages(20, 42);
     LOBV1 book;
 
-    std::cout << "Order vector:\n----\n";
+    // Verbose message vector construction, for smaller test cases
+    LOGN(
+        std::cout << "Order vector:\n----\n";
 
     for(auto &msg : messageQ){
         std::string front = msg.type == 1 ? "FILL" : "CANCEL"; 
         std::cout << front << " ORDER:" << msg.orderID << " SIZE: " << msg.size << " PRICE: " << msg.price << " DIR: " << msg.direction << "\n";
     }
-    
-    std::cout << "----\n";
+
+    std::cout << "----\n"
+    );
     
     /*
     std::string file = "data/AAPL_2012-06-21_34200000_57600000_message_5.csv";
@@ -34,42 +44,46 @@ int  main() {
     */
 
     //---------------------------------------------------------------------------------------
-    auto start = std::chrono::high_resolution_clock::now();
+    std::cout << "------------\n";
+    std::cout << "Beginning LOB benchmark 1 - Throughput\n";
+    //std::cout << "------------\n"; int count = 0;
 
+    auto start = std::chrono::high_resolution_clock::now();
     //---------------------------------------------------------------------------------------
     // BEGIN MEASURING TIME
     //---------------------------------------------------------------------------------------
 
     // Begin parsing the message queue
     // Remember: OrderEvent = time, type, orderID, size, price, direction
-    while (!messageQ.empty()){
+    for(int nxt = 0 ; nxt < messageQ.size() ; nxt++){
         // Most important columns in order: type -> direction -> price/orderID (Insert or Cancel) -> size (for partial deletion) -> time (most relevant during executions, which are comparatively rare)
-        auto msg = messageQ.front();
+        auto msg = messageQ[nxt];
         
         switch(msg.type) {                                               // Strings are basically lists/vectors. Hence it's type[0] which is jarring
             case 1:                                                   // New Limit Order
                 if(!book.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time)) {
                     std::cerr << "Error inserting order " << msg.orderID  << std::endl;
-                } else {
+                } LOGN(else {
                     std::cout << "Fill - ORDER: " << msg.orderID << " with PRICE: " << msg.price << " and SIZE: " << msg.size << " to MAP: " << msg.direction <<"\n";
-                }
+                })
                 break;
             case 2:                                                   // Cancel Limit Orders (Partial Deletion)
                 if(!book.cancelOrder(msg.direction, msg.orderID, msg.size, 0)) {
                     std::cerr << "Error canceling order " << msg.orderID  << std::endl;
-                } else {
+                } LOGN(else {
                     std::cout << "Cancel - ORDER: " << msg.orderID << " with SIZE: " << msg.size << " on MAP: " << msg.direction <<"\n";
-                }
+                })
                 break;
             case 3:                                                   // Cancel Limit Orders (Total Deletion, set TOTAL to 1 and immediately erase)
                 if(!book.cancelOrder(msg.direction, msg.orderID, msg.size, 1)) {
                     std::cerr << "Error canceling order " << msg.orderID << std::endl;
-                } else {
+                } LOGN(else {
                     std::cout << "Total Cancel - ORDER: " << msg.orderID << " on MAP: " << msg.direction <<"\n";
-                }
+                })
                 break;
         }
-        messageQ.erase(messageQ.begin());
+        //count += 1;
+        //if(count % 1000 == 0) {std::cout << count << " messages parsed\n";}
     }
 
     //---------------------------------------------------------------------------------------
@@ -80,8 +94,83 @@ int  main() {
     //---------------------------------------------------------------------------------------
 
     std::chrono::duration<double,std::milli> elapsed = end-start;
+    std::cout << "------------\nBenchmark 1 Complete. Stats:\n";
     std::cout << "Time elapsed: " << elapsed.count() << "ms\n";
+    std::cout << "Throughput Messages Per Second: " << numMessages/(elapsed.count()/1000) << "\n";
     //std::cout << "-----------------\n" << "-Buy map:\n" << map_to_string(book.buy) << "\n\n-Sell map:\n" << map_to_string(book.sell) <<"\n-----------------\n";
+    
+    book.clearBook();
+    std::vector<uint32_t> latencies_ns;
+    latencies_ns.resize(messageQ.size());
+
+    std::cout << "\n------------\n";
+    std::cout << "Beginning LOB benchmark 2 - Latency\n";
+    //std::cout << "------------\n"; int count = 0;
+
+    
+    for(int nxt = 0 ; nxt < messageQ.size() ; nxt++){
+        auto msg = messageQ[nxt];
+
+        //---------------------------------------------------------------------------------------
+        // BEGIN MEASURING TIME
+        //---------------------------------------------------------------------------------------
+        auto t0 = std::chrono::high_resolution_clock::now();
+        
+        switch(msg.type) {                                               
+            case 1:                                                   // New Limit Order
+                if(!book.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time)) {
+                    std::cerr << "Error inserting order " << msg.orderID  << std::endl;
+                } LOGN(else {
+                    std::cout << "Fill - ORDER: " << msg.orderID << " with PRICE: " << msg.price << " and SIZE: " << msg.size << " to MAP: " << msg.direction <<"\n";
+                })
+                break;
+            case 2:                                                   
+                if(!book.cancelOrder(msg.direction, msg.orderID, msg.size, 0)) {
+                    std::cerr << "Error canceling order " << msg.orderID  << std::endl;
+                } LOGN(else {
+                    std::cout << "Cancel - ORDER: " << msg.orderID << " with SIZE: " << msg.size << " on MAP: " << msg.direction <<"\n";
+                })
+                break;
+            case 3:                                                   
+                if(!book.cancelOrder(msg.direction, msg.orderID, msg.size, 1)) {
+                    std::cerr << "Error canceling order " << msg.orderID << std::endl;
+                } LOGN(else {
+                    std::cout << "Total Cancel - ORDER: " << msg.orderID << " on MAP: " << msg.direction <<"\n";
+                })
+                break;
+        }
+
+        auto t1 = std::chrono::high_resolution_clock::now();
+        latencies_ns[nxt] = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+        //count += 1;
+        //if(count % 1000 == 0) {std::cout << count << " messages parsed\n";}
+        //---------------------------------------------------------------------------------------
+        // END MEASURE
+        //---------------------------------------------------------------------------------------
+    }
+
+
+    //---------------------------------------------------------------------------------------
+
+    std::cout << "------------\nBenchmark 2 Complete. Stats:\n";
+    
+    std::sort(latencies_ns.begin(), latencies_ns.end());
+
+    size_t n = latencies_ns.size();
+    uint32_t p50  = latencies_ns[n * 0.50];
+    uint32_t p99  = latencies_ns[n * 0.99];
+    uint32_t p999 = latencies_ns[n * 0.999];
+    uint32_t max  = latencies_ns.back();
+    
+    std::cout << "Number of messages: " << n << "\n";
+    std::cout << "Median/Average processing time: " << p50 << "ns\n";
+    std::cout << "99th Percentile processing time: " << p99 << "ns\n";
+    std::cout << "99.9th Percentile processing time: " << p999 << "ns\n";
+    std::cout << "Max processing time: " << max << "ns\n";
+    
+    
+
+    
     return 0;
 }
 

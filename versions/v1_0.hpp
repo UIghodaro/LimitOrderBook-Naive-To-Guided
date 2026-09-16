@@ -10,6 +10,9 @@
 #include <fstream>
 #include <sstream>
 
+#include "../utils/Logging.hpp"
+
+
 struct Order {                                      
     int OrderID;                         
     double time;                         
@@ -58,21 +61,21 @@ class LOBV1 {
                 }
 
                 if(price >= sell.begin()->first){
-                    std::cout << "------------\nEXECUTING BUY ORDER: " << ord.OrderID << " of size: " << ord.size << " and price: " << price << "\n";
+                    LOG("------------\nEXECUTING BUY ORDER: " << ord.OrderID << " of size: " << ord.size << " and price: " << price << "\n");
                     while(ord.size > 0 && !sell.empty() && price >= sell.begin()->first){
                         auto &[cheapestSell, orders] = *sell.begin();                   
                         
                         while(!orders.empty()) {
                             Order &nextOrder = orders.front();
 
-                            if(nextOrder.size < ord.size) {std::cout << "Consume order " << nextOrder.OrderID << " of price " << cheapestSell << ", count " << nextOrder.size << "\n"; ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
-                            else if(nextOrder.size == ord.size) {std::cout << "Consume order " << nextOrder.OrderID << " of price " << cheapestSell << ", count " << nextOrder.size << "\n"; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); std::cout << "EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"; return false;}
-                            else                      {std::cout << "Consume " << ord.size << " from order " <<  nextOrder.OrderID << " of price " << cheapestSell << "\n"; nextOrder.size -= ord.size; std::cout << "EXECUTED ORDER: " << ord.OrderID << ", size remaining of last order: " << nextOrder.size << "\n------------\n"; return false;}                   
+                            if(nextOrder.size < ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestSell << ", count " << nextOrder.size << "\n"); ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
+                            else if(nextOrder.size == ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestSell << ", count " << nextOrder.size << "\n"); ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"); return false;}
+                            else                      {LOG("Consume " << ord.size << " from order " <<  nextOrder.OrderID << " of price " << cheapestSell << "\n"); nextOrder.size -= ord.size; LOG("EXECUTED ORDER: " << ord.OrderID << ", size remaining of last order: " << nextOrder.size << "\n------------\n"); return false;}                   
                         }
                         
                         sell.erase(sell.begin());
                     }
-                    std::cout << "EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n";
+                    LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n");
                 }
             }
 
@@ -82,21 +85,21 @@ class LOBV1 {
                 }
                 
                 if(price <= buy.rbegin()->first){
-                    std::cout << "------------\nEXECUTING SELL ORDER: " << ord.OrderID << " of size: " << ord.size << " and price: " << price << "\n";
+                    LOG("------------\nEXECUTING SELL ORDER: " << ord.OrderID << " of size: " << ord.size << " and price: " << price << "\n");
                     while(ord.size > 0 && !buy.empty() && price <= buy.rbegin()->first){
                         auto &[cheapestBuy, orders] = *buy.rbegin();                   
                         
                         while(!orders.empty()) {
                             Order &nextOrder = orders.front();
 
-                            if(nextOrder.size < ord.size) {std::cout << "Consume order " << nextOrder.OrderID << " of price " << cheapestBuy << ", count " << nextOrder.size << "\n"; ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
-                            else if(nextOrder.size == ord.size) {std::cout << "Consume order " << nextOrder.OrderID << " of price " << cheapestBuy << ", count " << nextOrder.size << "\n"; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); std::cout << "EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"; return false;}
-                            else                      {std::cout << "Consume " << ord.size << " from order " <<  nextOrder.OrderID << " of price " << cheapestBuy << "\n"; nextOrder.size -= ord.size; std::cout << "EXECUTED ORDER: " << ord.OrderID << ", size remaining of last order: " << nextOrder.size << "\n------------\n"; return false;}                   
+                            if(nextOrder.size < ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestBuy << ", count " << nextOrder.size << "\n"); ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
+                            else if(nextOrder.size == ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestBuy << ", count " << nextOrder.size << "\n"); ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"); return false;}
+                            else                      {LOG("Consume " << ord.size << " from order " <<  nextOrder.OrderID << " of price " << cheapestBuy << "\n"); nextOrder.size -= ord.size;LOG("EXECUTED ORDER: " << ord.OrderID << ", size remaining of last order: " << nextOrder.size << "\n------------\n"); return false;}                   
                         }
                         
                         buy.erase(std::prev(buy.end()));
                     }
-                    std::cout << "EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n";
+                    LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n");
                 }
             }
             return true;
@@ -108,8 +111,8 @@ class LOBV1 {
 
             if(!executeOrder(newOrder, price, direction)) {return 1;}
 
-            if(direction == 1)   {buy[price].push_back(newOrder);}
-            else                   {sell[price].push_back(newOrder);}
+            if(direction == 1)      {buy[price].push_back(newOrder);}
+            else                    {sell[price].push_back(newOrder);}
 
             Detail details{price, time};
             ID_price_book[orderID] = details;
@@ -117,20 +120,23 @@ class LOBV1 {
         }
 
         int cancelOrder(int direction, int orderID, int size, int TOTAL) {
-            int price = ID_price_book[orderID].price;
+            auto it = ID_price_book.find(orderID);
+            // If the order already doesn't exist then exit early
+            if (it == ID_price_book.end())  {return 1;}
+
             double time = ID_price_book[orderID].time;
 
             
             std::vector<Order>* priceVector;
         
             if(direction == 1) {
-                if(buy.at(price).size() == 1 && (TOTAL ||buy[price].at(0).size <= size))    {buy.erase(price); ID_price_book.erase(orderID);return 1;} 
-                else                                                                      {priceVector = &buy[price];}
+                if(buy[it->second.price].size() == 1 && (TOTAL ||buy[it->second.price].at(0).size <= size)) {buy.erase(it->second.price); ID_price_book.erase(orderID);return 1;} 
+                else                                                                                        {priceVector = &buy[it->second.price];}
             }
 
             else {
-                if(sell.at(price).size() == 1 && (TOTAL || sell[price].at(0).size <= size))  {sell.erase(price); ID_price_book.erase(orderID);return 1;} 
-                else                                                                         {priceVector = &sell[price];}
+                if(sell[it->second.price].size() == 1 && (TOTAL || sell[it->second.price].at(0).size <= size))  {sell.erase(it->second.price); ID_price_book.erase(orderID);return 1;} 
+                else                                                                                            {priceVector = &sell[it->second.price];}
             }
 
             int id = BinarySearch(priceVector, time);
@@ -142,5 +148,11 @@ class LOBV1 {
 
 
             return -1;
+        }
+
+        void clearBook() {
+            buy.clear();
+            sell.clear();
+            ID_price_book.clear();
         }
 };

@@ -30,7 +30,7 @@ namespace Utils {
         int startPrice = 10000,      
         int tickSize = 100,
         double reversionStrength = 0.1,
-        double crossProbability = 0.55,         // fraction of inserts that are aggressive/crossing
+        double crossProbability = 0.15,         // fraction of inserts that are aggressive/crossing
         double cancelProbability = 0.3,         // fraction of messages that are cancels vs inserts
         double partialCancelFraction = 0.2      // Of cancels, fraction that are type 2 vs type 3
     ) {
