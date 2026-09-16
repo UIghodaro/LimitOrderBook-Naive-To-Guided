@@ -1,3 +1,14 @@
+# Work in progress, but here's how to run it
+```bash
+# For Mac/Linux
+g++ -O3 -o benchmark.out benchmark.cpp
+./benchmark.out
+```
+```bash
+# For windows
+g++ -O3 -o benchmark.exe benchmark.cpp
+./benchmark.exe
+```
 # Quick Note: Benchmark.cpp
 I was deciding how to create a good set of synthetic datapoints, I initially thought "random points in a range is too shallow, a random walk/brownian motion would just go to + or - infinity - do we just map the stocks using a distribution? Like generate price points using N~(1000, sigma) for some sigma. Apparently that's worse cause given enough datapoints, you'll never end up with an empty price level - which intuitively makes sense. \
 The answer is modelling a random walk around a price point with some kind of "hook" or "bias" which pulls the walk back to a historical mean - as such, it does not diverge in the long run.  \
