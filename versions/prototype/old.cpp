@@ -229,7 +229,7 @@ int main() {
     // Initially, I left getting and parsing a message in an entirely different function, but using it in main allows me to complete necessary conversions immediately and reduces GOTO overhead
 
     // Get the CSV filename and then a variable 'line' which will hold each line of the file - I can already see how this'll scale to multithreading
-    std::string file = "Test.csv";
+    std::string file = "../../utils/validationTestCases.csv";
     std::ifstream csv_file(file);
     std::cout << "Dataset loaded from: " << file << "\n";
     std::string line;
@@ -302,7 +302,9 @@ int main() {
     */
 
     // Read message rows and begin parsing + working 
+    std::cout << "here";
     while (std::getline(csv_file, line)) {
+        std::cout << "here";
         std::stringstream ss(line);
         std::string time_str, type, orderID_str, size_str, price_str, direction;
 
@@ -343,11 +345,10 @@ int main() {
                 break;
             case '7':                                                   // Trading Halt
                 break;
-        }
-
-        // Refresh the top of the book
-
-        std::cout << "-----------------\n" << "-Buy map:\n" << map_to_string(buy) << "\n\n-Sell map:\n" << map_to_string(sell) <<"\n-----------------\n";
+            }
+            
+        std::cout << map_to_string(buy) << "\n---" << map_to_string(sell);
+        //std::cout << "-----------------\n" << "-Buy map:\n" << map_to_string(buy) << "\n\n-Sell map:\n" << map_to_string(sell) <<"\n-----------------\n";
     }
     
     return 0;

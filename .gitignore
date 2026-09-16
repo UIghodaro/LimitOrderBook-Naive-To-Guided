@@ -1,5 +1,9 @@
 data/
-book.exe
-book.out
-benchmark.exe
+versions/prototype/old.out
+versions/prototype/old.exe
+
+versions/v1_0.out
+versions/v1_0.exe
+
 benchmark.out
+benchmark.exe

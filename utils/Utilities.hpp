@@ -6,6 +6,8 @@
 #include <vector>
 #include <set>
 
+#include "../versions/bookObject.hpp"
+
 struct OrderEvent {
     double time;
     int type;
@@ -126,4 +128,48 @@ namespace Utils {
 
         return messages;
     }
-} 
+
+    inline int validateBook(book& lobook) {
+        std::vector<OrderEvent> testCases = {
+            // Fill buy side
+            OrderEvent{34200.100000,1,1001,200,290,1},
+            OrderEvent{34200.150000,1,1002,150,280,1},
+            OrderEvent{34200.200000,1,1003,100,270,1},
+            OrderEvent{34200.250000,1,1004,200,290,1},
+            OrderEvent{34200.300000,1,1005,200,290,1},
+
+            // Buy side execution
+            OrderEvent{34200.350000,1,3001,100,290,-1},     // Partial execution, order 1001: 200 -> 100
+            OrderEvent{34200.400000,1,3002,150,290,-1},     // Price-time priority, order 1001: 100 -> 0 AND order 1004: 200 -> 150
+            OrderEvent{34200.450000,1,3003,400,280,-1},     // Multi-level, order 1004: 150 -> 0 AND order 1005: 200 -> 0 AND order 1002: 150 -> 100
+            OrderEvent{34200.500000,1,3004,100,280,-1},     // Total execution, order 1002: 100 -> 0
+
+            // Fill sell side
+            OrderEvent{34200.550000,1,2001,100,340,-1},      
+            OrderEvent{34200.600000,1,2002,150,320,-1},
+            OrderEvent{34200.650000,1,2003,200,300,-1},
+            OrderEvent{34200.700000,1,2004,200,300,-1},
+            OrderEvent{34200.750000,1,2005,200,300,-1},
+
+            // Sell side execution
+            OrderEvent{34200.800000,1,4001,100,300,1},      // Same logic as buy side tests
+            OrderEvent{34200.850000,1,4002,150,300,1},
+            OrderEvent{34200.900000,1,4003,400,320,1},
+            OrderEvent{34200.950000,1,4004,100,320,1},
+
+            // Buy side cancel logic
+            OrderEvent{34201.100000,2,1003,50,270,1},       // Partial deletion
+            OrderEvent{34201.150000,3,1003,40,270,1},       // Total deletion
+            OrderEvent{34201.200000,2,1003,50,270,1},       // Deletion of non-existent element
+
+            // Sell side cancel logic
+            OrderEvent{34201.250000,2,2001,50,340,1},       // Partial deletion
+            OrderEvent{34201.300000,3,2001,50,340,1},       // Total deletion
+            OrderEvent{34201.350000,2,2001,50,340,1}        // Deletion of non-existent element
+            
+            // After all of the above operations, the map should be empty
+        };
+
+        
+    } 
+}

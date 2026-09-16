@@ -9,7 +9,9 @@
 #include "utils/Logging.hpp"
 #include "utils/Utilities.hpp"
 
+#include "versions/bookObject.hpp"
 #include "versions/v1_0.hpp"
+
 
 
 
@@ -22,7 +24,7 @@ int  main() {
     auto messageQ = Utils::generateSyntheticMessages(numMessages, 42);
     std::cout<< "\n---\nMessages Generated.\n";
 
-    LOBV1 book;
+    LOBV1 lobook;
 
     // Verbose message vector construction, for smaller test cases
     LOGN(
@@ -61,21 +63,21 @@ int  main() {
         
         switch(msg.type) {                                               // Strings are basically lists/vectors. Hence it's type[0] which is jarring
             case 1:                                                   // New Limit Order
-                if(!book.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time)) {
+                if(!lobook.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time)) {
                     std::cerr << "Error inserting order " << msg.orderID  << std::endl;
                 } LOGN(else {
                     std::cout << "Fill - ORDER: " << msg.orderID << " with PRICE: " << msg.price << " and SIZE: " << msg.size << " to MAP: " << msg.direction <<"\n";
                 })
                 break;
             case 2:                                                   // Cancel Limit Orders (Partial Deletion)
-                if(!book.cancelOrder(msg.direction, msg.orderID, msg.size, 0)) {
+                if(!lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 0)) {
                     std::cerr << "Error canceling order " << msg.orderID  << std::endl;
                 } LOGN(else {
                     std::cout << "Cancel - ORDER: " << msg.orderID << " with SIZE: " << msg.size << " on MAP: " << msg.direction <<"\n";
                 })
                 break;
             case 3:                                                   // Cancel Limit Orders (Total Deletion, set TOTAL to 1 and immediately erase)
-                if(!book.cancelOrder(msg.direction, msg.orderID, msg.size, 1)) {
+                if(!lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 1)) {
                     std::cerr << "Error canceling order " << msg.orderID << std::endl;
                 } LOGN(else {
                     std::cout << "Total Cancel - ORDER: " << msg.orderID << " on MAP: " << msg.direction <<"\n";
@@ -97,9 +99,9 @@ int  main() {
     std::cout << "------------\nBenchmark 1 Complete. Stats:\n";
     std::cout << "Time elapsed: " << elapsed.count() << "ms\n";
     std::cout << "Throughput Messages Per Second: " << numMessages/(elapsed.count()/1000) << "\n";
-    //std::cout << "-----------------\n" << "-Buy map:\n" << map_to_string(book.buy) << "\n\n-Sell map:\n" << map_to_string(book.sell) <<"\n-----------------\n";
+    //std::cout << "-----------------\n" << "-Buy map:\n" << map_to_string(lobook.buy) << "\n\n-Sell map:\n" << map_to_string(lobook.sell) <<"\n-----------------\n";
     
-    book.clearBook();
+    lobook.clearBook();
     std::vector<uint32_t> latencies_ns;
     latencies_ns.resize(messageQ.size());
 
@@ -118,21 +120,21 @@ int  main() {
         
         switch(msg.type) {                                               
             case 1:                                                   // New Limit Order
-                if(!book.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time)) {
+                if(!lobook.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time)) {
                     std::cerr << "Error inserting order " << msg.orderID  << std::endl;
                 } LOGN(else {
                     std::cout << "Fill - ORDER: " << msg.orderID << " with PRICE: " << msg.price << " and SIZE: " << msg.size << " to MAP: " << msg.direction <<"\n";
                 })
                 break;
             case 2:                                                   
-                if(!book.cancelOrder(msg.direction, msg.orderID, msg.size, 0)) {
+                if(!lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 0)) {
                     std::cerr << "Error canceling order " << msg.orderID  << std::endl;
                 } LOGN(else {
                     std::cout << "Cancel - ORDER: " << msg.orderID << " with SIZE: " << msg.size << " on MAP: " << msg.direction <<"\n";
                 })
                 break;
             case 3:                                                   
-                if(!book.cancelOrder(msg.direction, msg.orderID, msg.size, 1)) {
+                if(!lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 1)) {
                     std::cerr << "Error canceling order " << msg.orderID << std::endl;
                 } LOGN(else {
                     std::cout << "Total Cancel - ORDER: " << msg.orderID << " on MAP: " << msg.direction <<"\n";
@@ -166,15 +168,16 @@ int  main() {
     std::cout << "Median/Average processing time: " << p50 << "ns\n";
     std::cout << "99th Percentile processing time: " << p99 << "ns\n";
     std::cout << "99.9th Percentile processing time: " << p999 << "ns\n";
-    std::cout << "Max processing time: " << max << "ns\n";
-    
-    
+    std::cout << "Max processing time: " << max << "ns\n";    
 
-    
     return 0;
 }
 
 /*  OLD LOGIC FOR PARSING FILES - will probably put back in later
+    std::string file = "Test.csv";
+    std::ifstream csv_file(file);
+    std::cout << "Dataset loaded from: " << file << "\n";
+    std::string line;
 
     while (std::getline(csv_file, line)) {
         std::stringstream ss(line);
@@ -191,17 +194,17 @@ int  main() {
         // Most important columns in order: type -> direction -> price/orderID (Insert or Cancel) -> size (for partial deletion) -> time (most relevant during executions, which are comparatively rare)
         switch(type[0]) {                                               // Strings are basically lists/vectors. Hence it's type[0] which is jarring
             case '1':                                                   // New Limit Order
-                if(!book.insertOrder(direction, price, orderID, size, time)) {
+                if(!lobook.insertOrder(direction, price, orderID, size, time)) {
                     std::cerr << "Error inserting order " << orderID  << std::endl;
                 }
                 break;
             case '2':                                                   // Cancel Limit Orders (Partial Deletion)
-                if(!book.cancelOrder(direction, orderID, size, 0)) {
+                if(!lobook.cancelOrder(direction, orderID, size, 0)) {
                     std::cerr << "Error canceling order " << orderID  << std::endl;
                 }
                 break;
             case '3':                                                   // Cancel Limit Orders (Total Deletion, set TOTAL to 1 and immediately erase)
-                if(!book.cancelOrder(direction, orderID, size, 1)) {
+                if(!lobook.cancelOrder(direction, orderID, size, 1)) {
                     std::cerr << "Error canceling order " << orderID << std::endl;
                 }
                 break;
