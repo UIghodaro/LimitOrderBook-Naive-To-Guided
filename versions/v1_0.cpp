@@ -30,7 +30,17 @@ struct Detail {
     double time;
 };
 
+struct OrderEvent {
+    double time;
+    int type;
+    int orderID;
+    int size;
+    int price;
+    int direction;
+};
+
 class LOBV1 {
+    public:
     // We create a map (ordered!) which uses prices as keys and vectors holding information about each 
     std::map<int, std::vector<Order>> buy;
     std::map<int, std::vector<Order>> sell;     
@@ -123,7 +133,7 @@ class LOBV1 {
                         if(nextOrder.size < ord.size) {ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
 
                         // Avoid size 0 orders in the order queue
-                        else if(nextOrder.size == ord.size) {ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); return false;}
+                        else if(nextOrder.size == ord.size) {ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); sell.erase(sell.begin()); return false;}
 
                         // If the order is satisfied however, just update the front of the top of the map and then end
                         else                      {nextOrder.size -= ord.size; return false;}                   
@@ -148,7 +158,7 @@ class LOBV1 {
                         Order &nextOrder = orders.front();
 
                         if(nextOrder.size < ord.size) {ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
-                        else if(nextOrder.size == ord.size) {ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); return false;}
+                        else if(nextOrder.size == ord.size) {ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); buy.erase(std::prev(buy.end())); return false;}
                         else                      {nextOrder.size -= ord.size; return false;}                   
                     }
                     
@@ -186,38 +196,103 @@ class LOBV1 {
     // Direction tells us which map to check, price tells us which key, orderID tells us what to search for and cancel, size dictates the amount to slime out and TOTAL decides if it's a partial or total deletion
     // I will decide if this is correct or not later when I 
     int cancelOrder(std::string direction, int orderID, int size, int TOTAL) {
-        int price = ID_price_book[orderID].price;
+        auto it = ID_price_book.find(orderID);
+        // If the order doesn't exist then exit early
+        if (it == ID_price_book.end())  {return 1;}
+
         double time = ID_price_book[orderID].time;
 
         
-        // I want to save a reference point to the vector in buy or sell price don't I? 
         std::vector<Order>* priceVector;
     
-        // Based on direction, look at either side of the book
         if(direction == "1") {
-            // If the vector has a size of 1, then the order we are looking for is necessarily at index 0, so you can check immediately
-            if(buy[price].size() == 1 && (TOTAL ||buy[price].at(0).size <= size))    {buy.erase(price); ID_price_book.erase(orderID);return 1;} 
-            else                                                                      {priceVector = &buy[price];}
+            if(buy[it->second.price].size() == 1 && (TOTAL ||buy[it->second.price].at(0).size <= size)) {buy.erase(it->second.price); ID_price_book.erase(orderID);return 1;} 
+            else                                                                                        {priceVector = &buy[it->second.price];}
         }
 
         else {
-            if(sell[price].size() == 1 && (TOTAL || sell[price].at(0).size <= size))  {sell.erase(price); ID_price_book.erase(orderID);return 1;} 
-            else                                                                      {priceVector = &sell[price];}
+            if(sell[it->second.price].size() == 1 && (TOTAL || sell[it->second.price].at(0).size <= size))  {sell.erase(it->second.price); ID_price_book.erase(orderID);return 1;} 
+            else                                                                                            {priceVector = &sell[it->second.price];}
         }
 
-        // Now, complete a Binary Search for the index before operating
         int id = BinarySearch(priceVector, time);
 
-        // This should never reasonably happen due to the precision of given times, but it'd be good to catch it early if there is any issue
-        if(priceVector->at(id).OrderID != orderID) {return -1;} 
+        if (id == -1 || priceVector->at(id).OrderID != orderID) {return -1;} 
 
-        // If you have reached this point, the the element found is not the lone item in the price vector and so would not trigger erasing the whole key
-        // Remember to wipe the orderID from ID-Detail map though
         if(TOTAL || priceVector->at(id).size <= size) {priceVector->erase(priceVector->begin() + id); ID_price_book.erase(orderID); return 1;}
         else                                          {priceVector->at(id).size -= size; return 1;}
 
 
-        // This shouldn't be reachable
         return -1;
     }
 };
+
+int main() {
+    std::vector<OrderEvent> testCases = {
+            // Fill buy side
+            OrderEvent{34200.100000,1,1001,200,290,1},
+            OrderEvent{34200.150000,1,1002,150,280,1},
+            OrderEvent{34200.200000,1,1003,100,270,1},
+            OrderEvent{34200.250000,1,1004,200,290,1},
+            OrderEvent{34200.300000,1,1005,200,290,1},
+
+            // Buy side execution
+            OrderEvent{34200.350000,1,3001,100,290,-1},     // Partial execution, order 1001: 200 -> 100
+            OrderEvent{34200.400000,1,3002,150,290,-1},     // Price-time priority, order 1001: 100 -> 0 AND order 1004: 200 -> 150
+            OrderEvent{34200.450000,1,3003,400,280,-1},     // Multi-level, order 1004: 150 -> 0 AND order 1005: 200 -> 0 AND order 1002: 150 -> 100
+            OrderEvent{34200.500000,1,3004,100,280,-1},     // Total execution, order 1002: 100 -> 0
+
+            // Fill sell side
+            OrderEvent{34200.550000,1,2001,100,340,-1},      
+            OrderEvent{34200.600000,1,2002,150,320,-1},
+            OrderEvent{34200.650000,1,2003,200,300,-1},
+            OrderEvent{34200.700000,1,2004,200,300,-1},
+            OrderEvent{34200.750000,1,2005,200,300,-1},
+
+            // Sell side execution
+            OrderEvent{34200.800000,1,4001,100,300,1},      // Same logic as buy side tests
+            OrderEvent{34200.850000,1,4002,150,300,1},
+            OrderEvent{34200.900000,1,4003,400,320,1},
+            OrderEvent{34200.950000,1,4004,100,320,1},
+            
+            // Buy side cancel logic - By this point only orders 1003 and 2001 must exist
+            OrderEvent{34201.100000,2,1003,50,270,1},       // Partial deletion, order 1003: 100 -> 50
+            OrderEvent{34201.150000,3,1003,40,270,1},       // Total deletion, order 1003: 50 -> 0
+            OrderEvent{34201.200000,2,1003,50,270,1},       // Deletion of non-existent element -> buy side remains empty
+
+            // Sell side cancel logic
+            OrderEvent{34201.250000,2,2001,50,340,-1},       // Partial deletion, order 2001: 100 -> 50
+            OrderEvent{34201.300000,3,2001,50,340,-1},       // Total deletion, order 2001: 50 -> 0
+            OrderEvent{34201.350000,2,2001,50,340,-1}        // Deletion of non-existent element -> sell side remains empty
+            
+            // After all of the above operations, the map should be empty
+        };
+
+    LOBV1 lobook;
+
+    for(int nxt = 0 ; nxt < testCases.size() ; nxt++){
+        // Most important columns in order: type -> direction -> price/orderID (Insert or Cancel) -> size (for partial deletion) -> time (most relevant during executions, which are comparatively rare)
+        auto msg = testCases[nxt];
+        
+        switch(msg.type) {                                               // Strings are basically lists/vectors. Hence it's type[0] which is jarring
+            case 1:                                                   // New Limit Order
+                if(!lobook.insertOrder(msg.direction == 1 ? "1" : "-1", msg.price, msg.orderID, msg.size, msg.time)) {
+                    std::cerr << "Error inserting order " << msg.orderID  << std::endl;
+                }
+                break;
+            case 2:                                                   // Cancel Limit Orders (Partial Deletion)
+                if(!lobook.cancelOrder(msg.direction == 1 ? "1" : "-1", msg.orderID, msg.size, 0)) {
+                    std::cerr << "Error canceling order " << msg.orderID  << std::endl;
+                }
+                break;
+            case 3:                                                   // Cancel Limit Orders (Total Deletion, set TOTAL to 1 and immediately erase)
+                if(!lobook.cancelOrder(msg.direction == 1 ? "1" : "-1", msg.orderID, msg.size, 1)) {
+                    std::cerr << "Error canceling order " << msg.orderID << std::endl;
+                }
+                break;
+        }
+        //count += 1;
+        //if(count % 1000 == 0) {std::cout << count << " messages parsed\n";}
+        std::cout << nxt << ". \n------------\n" << lobook.map_to_string(lobook.buy) << "\n---\n" << lobook.map_to_string(lobook.sell) << "\n------------";
+    }
+}

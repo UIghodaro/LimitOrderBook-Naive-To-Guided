@@ -7,6 +7,7 @@
 #include <set>
 
 #include "../versions/bookObject.hpp"
+#include "../versions/v1_0.hpp"
 
 struct OrderEvent {
     double time;
@@ -129,7 +130,7 @@ namespace Utils {
         return messages;
     }
 
-    inline int validateBook(book& lobook) {
+    inline bool validateBook(book& lobook) {
         std::vector<OrderEvent> testCases = {
             // Fill buy side
             OrderEvent{34200.100000,1,1001,200,290,1},
@@ -157,19 +158,48 @@ namespace Utils {
             OrderEvent{34200.900000,1,4003,400,320,1},
             OrderEvent{34200.950000,1,4004,100,320,1},
 
-            // Buy side cancel logic
-            OrderEvent{34201.100000,2,1003,50,270,1},       // Partial deletion
-            OrderEvent{34201.150000,3,1003,40,270,1},       // Total deletion
-            OrderEvent{34201.200000,2,1003,50,270,1},       // Deletion of non-existent element
+            // Buy side cancel logic - By this point only orders 1003 and 2001 must exist
+            OrderEvent{34201.100000,2,1003,50,270,1},       // Partial deletion, order 1003: 100 -> 50
+            OrderEvent{34201.150000,3,1003,40,270,1},       // Total deletion, order 1003: 50 -> 0
+            OrderEvent{34201.200000,2,1003,50,270,1},       // Deletion of non-existent element -> buy side remains empty
 
             // Sell side cancel logic
-            OrderEvent{34201.250000,2,2001,50,340,1},       // Partial deletion
-            OrderEvent{34201.300000,3,2001,50,340,1},       // Total deletion
-            OrderEvent{34201.350000,2,2001,50,340,1}        // Deletion of non-existent element
-            
+            OrderEvent{34201.250000,2,2001,50,340,-1},       // Partial deletion, order 2001: 100 -> 50
+            OrderEvent{34201.300000,3,2001,50,340,-1},       // Total deletion, order 2001: 50 -> 0
+            OrderEvent{34201.350000,2,2001,50,340,-1}        // Deletion of non-existent element -> sell side remains empty
+
             // After all of the above operations, the map should be empty
         };
 
+        LOBV1 validator;                        // LOB version 1 has been confirmed to have correct logic, therefore use it as the validator
+
+        for(int nxt = 0 ; nxt < testCases.size() ; nxt++){
+            // Most important columns in order: type -> direction -> price/orderID (Insert or Cancel) -> size (for partial deletion) -> time (most relevant during executions, which are comparatively rare)
+            auto msg = testCases[nxt];
+            std::string debug;
+
+            switch(msg.type) {                                               // Strings are basically lists/vectors. Hence it's type[0] which is jarring
+                case 1:                                                      // New Limit Order
+                    debug = "INSERT";
+                    lobook.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time);
+                    validator.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time);
+                    break;
+                case 2:                                                   // Cancel Limit Orders (Partial Deletion)
+                    debug = "CANCEL";
+                    lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 0);
+                    validator.cancelOrder(msg.direction, msg.orderID, msg.size, 0);
+                    break;
+                case 3:                                                   // Cancel Limit Orders (Total Deletion, set TOTAL to 1 and immediately erase)
+                    debug = "CANCEL";
+                    lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 1);
+                    validator.cancelOrder(msg.direction, msg.orderID, msg.size, 1);
+                    break;
+            }
+
+            if(lobook.currentBook() != lobook.currentBook()){std::cout << "Validation Failed at " << debug; return false;}
+        }
+
+        return true;
         
     } 
 }

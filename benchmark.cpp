@@ -22,9 +22,18 @@ int  main() {
     int numMessages = 1'000'000;
     std::cout << "Generating messages...";
     auto messageQ = Utils::generateSyntheticMessages(numMessages, 42);
-    std::cout<< "\n---\nMessages Generated.\n";
+    std::cout<< "\n---\nMessages Generated.\n---\n---\nInstantiating and validating book...\n";
 
     LOBV1 lobook;
+    auto validation = Utils::validateBook(lobook);
+    try{
+        if(validation)  {std::cout << "Book validated\n";}
+        else            {throw -1;}
+    } catch(...) {
+        std::cout << "Aborted - Invalid book logic";
+    }
+
+    lobook.clearBook();
 
     // Verbose message vector construction, for smaller test cases
     LOGN(
