@@ -168,7 +168,7 @@ namespace Utils {
             OrderEvent{34201.300000,3,2001,50,340,-1},       // Total deletion, order 2001: 50 -> 0
             OrderEvent{34201.350000,2,2001,50,340,-1}        // Deletion of non-existent element -> sell side remains empty
 
-            // After all of the above operations, the map should be empty
+            // After all of the above operations, the book should be empty
         };
 
         LOBV1 validator;                        // LOB version 1 has been confirmed to have correct logic, therefore use it as the validator
@@ -196,7 +196,7 @@ namespace Utils {
                     break;
             }
 
-            if(lobook.currentBook() != lobook.currentBook()){std::cout << "Validation Failed at " << debug; return false;}
+            if(lobook.currentBook() != validator.currentBook()) {std::cout << "Validation Failed at " << debug; return false;}
         }
 
         return true;
