@@ -19,7 +19,7 @@ int  main() {
     //---------------------------------------------------------------------------------------
     // INITIALISING
     //---------------------------------------------------------------------------------------
-    int numMessages = 1'000'000;
+    int numMessages = 100'000'000;
     std::cout << "Generating messages...";
     auto messageQ = Utils::generateSyntheticMessages(numMessages, 42);
     std::cout<< "\n---\nMessages Generated.\n---\n---\nInstantiating and validating book...\n";
@@ -71,7 +71,7 @@ int  main() {
         auto msg = messageQ[nxt];
         
         switch(msg.type) {                                               // Strings are basically lists/vectors. Hence it's type[0] which is jarring
-            case 1:                                                   // New Limit Order
+            case 1:                                                      // New Limit Order
                 if(!lobook.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time)) {
                     std::cerr << "Error inserting order " << msg.orderID  << std::endl;
                 } LOGN(else {
@@ -112,12 +112,14 @@ int  main() {
     
     lobook.clearBook();
     std::vector<uint32_t> latencies_ns;
+    std::vector<std::string> types;
     latencies_ns.resize(messageQ.size());
+    types.reserve(messageQ.size());
 
     std::cout << "\n------------\n";
     std::cout << "Beginning LOB benchmark 2 - Latency\n";
     //std::cout << "------------\n"; int count = 0;
-
+    int ok;                                               
     
     for(int nxt = 0 ; nxt < messageQ.size() ; nxt++){
         auto msg = messageQ[nxt];
@@ -127,39 +129,27 @@ int  main() {
         //---------------------------------------------------------------------------------------
         auto t0 = std::chrono::high_resolution_clock::now();
         
-        switch(msg.type) {                                               
-            case 1:                                                   // New Limit Order
-                if(!lobook.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time)) {
-                    std::cerr << "Error inserting order " << msg.orderID  << std::endl;
-                } LOGN(else {
-                    std::cout << "Fill - ORDER: " << msg.orderID << " with PRICE: " << msg.price << " and SIZE: " << msg.size << " to MAP: " << msg.direction <<"\n";
-                })
-                break;
-            case 2:                                                   
-                if(!lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 0)) {
-                    std::cerr << "Error canceling order " << msg.orderID  << std::endl;
-                } LOGN(else {
-                    std::cout << "Cancel - ORDER: " << msg.orderID << " with SIZE: " << msg.size << " on MAP: " << msg.direction <<"\n";
-                })
-                break;
-            case 3:                                                   
-                if(!lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 1)) {
-                    std::cerr << "Error canceling order " << msg.orderID << std::endl;
-                } LOGN(else {
-                    std::cout << "Total Cancel - ORDER: " << msg.orderID << " on MAP: " << msg.direction <<"\n";
-                })
-                break;
+        switch(msg.type) {
+            case 1: ok = lobook.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time); break;
+            case 2: ok = lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 0); break;
+            case 3: ok = lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 1); break;
         }
 
         auto t1 = std::chrono::high_resolution_clock::now();
-        latencies_ns[nxt] = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
         //count += 1;
         //if(count % 1000 == 0) {std::cout << count << " messages parsed\n";}
         //---------------------------------------------------------------------------------------
         // END MEASURE
         //---------------------------------------------------------------------------------------
+        latencies_ns[nxt] = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+        
+        // Leave this outside of the measure to reduce ns overhead
+        switch(ok) {
+            case 0: types[nxt] = "Insert";         // Insert returns 0 if it is a pure insert
+            case 1: types[nxt] = "Execution";      // Insert returns 1 if there is an execution
+            case 2: types[nxt] = "Cancel";         // Cancel returns 2 if successful
+        }
     }
-
 
     //---------------------------------------------------------------------------------------
 
