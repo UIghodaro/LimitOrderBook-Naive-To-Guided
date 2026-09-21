@@ -5,122 +5,115 @@
 #include <set>
 #include <chrono>
 #include <algorithm>
+#include <iomanip>
 
 #include "utils/Logging.hpp"
 #include "utils/Utilities.hpp"
+#include "utils/statGetters.hpp"
 
 #include "versions/bookObject.hpp"
 #include "versions/v1_0.hpp"
-
-
 
 
 int  main() {
     //---------------------------------------------------------------------------------------
     // INITIALISING
     //---------------------------------------------------------------------------------------
-    int numMessages = 100'000'000;
+    int numMessages = 10'000'000;
     std::cout << "Generating messages...";
     auto messageQ = Utils::generateSyntheticMessages(numMessages, 42);
-    std::cout<< "\n---\nMessages Generated.\n---\n---\nInstantiating and validating book...\n";
+    std::cout<< "\nMessages Generated.\n---\nInstantiating and validating book...\n";
 
     LOBV1 lobook;
     auto validation = Utils::validateBook(lobook);
-    try{
-        if(validation)  {std::cout << "Book validated\n";}
-        else            {throw -1;}
-    } catch(...) {
-        std::cout << "Aborted - Invalid book logic";
+    if (!validation) {
+        std::cerr << "Book validation failed - invalid book logic found\n";
+        return 1;
     }
+    std::cout << "Book validated\n";
 
     lobook.clearBook();
+    int numIterations = 5;
 
     // Verbose message vector construction, for smaller test cases
     LOGN(
         std::cout << "Order vector:\n----\n";
-
-    for(auto &msg : messageQ){
-        std::string front = msg.type == 1 ? "FILL" : "CANCEL"; 
-        std::cout << front << " ORDER:" << msg.orderID << " SIZE: " << msg.size << " PRICE: " << msg.price << " DIR: " << msg.direction << "\n";
-    }
-
-    std::cout << "----\n"
+        for(auto &msg : messageQ){
+            std::string front = msg.type == 1 ? "FILL" : "CANCEL"; 
+            std::cout << front << " ORDER:" << msg.orderID << " SIZE: " << msg.size << " PRICE: " << msg.price << " DIR: " << msg.direction << "\n";
+        }
+        std::cout << "----\n"
     );
-    
-    /*
-    std::string file = "data/AAPL_2012-06-21_34200000_57600000_message_5.csv";
-    std::ifstream csv_file(file);
-    std::cout << "Dataset loaded from: " << file << "\n";
-    std::string line;
-    */
 
     //---------------------------------------------------------------------------------------
     std::cout << "------------\n";
     std::cout << "Beginning LOB benchmark 1 - Throughput\n";
-    //std::cout << "------------\n"; int count = 0;
+    std::vector<double> times;
+    times.resize(numIterations);
 
-    auto start = std::chrono::high_resolution_clock::now();
-    //---------------------------------------------------------------------------------------
-    // BEGIN MEASURING TIME
-    //---------------------------------------------------------------------------------------
+    for (int iteration = 0; iteration < numIterations; iteration++) {
 
-    // Begin parsing the message queue
-    // Remember: OrderEvent = time, type, orderID, size, price, direction
-    for(int nxt = 0 ; nxt < messageQ.size() ; nxt++){
-        // Most important columns in order: type -> direction -> price/orderID (Insert or Cancel) -> size (for partial deletion) -> time (most relevant during executions, which are comparatively rare)
-        auto msg = messageQ[nxt];
-        
-        switch(msg.type) {                                               // Strings are basically lists/vectors. Hence it's type[0] which is jarring
-            case 1:                                                      // New Limit Order
-                if(!lobook.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time)) {
-                    std::cerr << "Error inserting order " << msg.orderID  << std::endl;
-                } LOGN(else {
-                    std::cout << "Fill - ORDER: " << msg.orderID << " with PRICE: " << msg.price << " and SIZE: " << msg.size << " to MAP: " << msg.direction <<"\n";
-                })
-                break;
-            case 2:                                                   // Cancel Limit Orders (Partial Deletion)
-                if(!lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 0)) {
-                    std::cerr << "Error canceling order " << msg.orderID  << std::endl;
-                } LOGN(else {
-                    std::cout << "Cancel - ORDER: " << msg.orderID << " with SIZE: " << msg.size << " on MAP: " << msg.direction <<"\n";
-                })
-                break;
-            case 3:                                                   // Cancel Limit Orders (Total Deletion, set TOTAL to 1 and immediately erase)
-                if(!lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 1)) {
-                    std::cerr << "Error canceling order " << msg.orderID << std::endl;
-                } LOGN(else {
-                    std::cout << "Total Cancel - ORDER: " << msg.orderID << " on MAP: " << msg.direction <<"\n";
-                })
-                break;
+        auto start = std::chrono::high_resolution_clock::now();
+        //---------------------------------------------------------------------------------------
+        // BEGIN MEASURING TIME
+        //---------------------------------------------------------------------------------------
+    
+        // Begin parsing the message queue
+        // Remember: OrderEvent = time, type, orderID, size, price, direction
+        for(int nxt = 0 ; nxt < messageQ.size() ; nxt++){
+            // Most important columns in order: type -> direction -> price/orderID (Insert or Cancel) -> size (for partial deletion) -> time (most relevant during executions, which are comparatively rare)
+            auto msg = messageQ[nxt];
+            
+            switch(msg.type) {                                               // Strings are basically lists/vectors. Hence it's type[0] which is jarring
+                case 1: lobook.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time); LOGN( std::cout << "Fill - ORDER: " << msg.orderID << " with PRICE: " << msg.price << " and SIZE: " << msg.size << " to MAP: " << msg.direction <<"\n";)
+                        break;
+                case 2: lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 0); LOGN(std::cout << "Cancel - ORDER: " << msg.orderID << " with SIZE: " << msg.size << " on MAP: " << msg.direction <<"\n";)
+                        break;
+                case 3: lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 1); LOGN(std::cout << "Total Cancel - ORDER: " << msg.orderID << " on MAP: " << msg.direction <<"\n";)
+                        break;
+            }
+            //count += 1;
+            //if(count % 1000 == 0) {std::cout << count << " messages parsed\n";}
         }
-        //count += 1;
-        //if(count % 1000 == 0) {std::cout << count << " messages parsed\n";}
+    
+        //---------------------------------------------------------------------------------------
+        // END MEASURE
+        //---------------------------------------------------------------------------------------
+    
+        auto end = std::chrono::high_resolution_clock::now();
+        std::cout <<"-- RUN " << iteration+1 << " COMPLETE.\n";
+        //---------------------------------------------------------------------------------------
+        std::chrono::duration<double,std::milli> elapsed = end-start;
+        times[iteration] = elapsed.count();
+        lobook.clearBook();
     }
 
-    //---------------------------------------------------------------------------------------
-    // END MEASURE
-    //---------------------------------------------------------------------------------------
-
-    auto end = std::chrono::high_resolution_clock::now();
-    //---------------------------------------------------------------------------------------
-
-    std::chrono::duration<double,std::milli> elapsed = end-start;
+    T1stats benchOneStats = Stats::getBenchmarkOneStats(times);
     std::cout << "------------\nBenchmark 1 Complete. Stats:\n";
-    std::cout << "Time elapsed: " << elapsed.count() << "ms\n";
-    std::cout << "Throughput Messages Per Second: " << numMessages/(elapsed.count()/1000) << "\n";
+    std::string front1 = numIterations == 1 ? "Time Elapsed: " : "Average Time Elapsed: ";
+    std::string front2 = numIterations == 1 ? "Throughput: ~" : "Average Throughput: ~";
+    std::cout << front1 << benchOneStats.mean << " ± " << benchOneStats.stdd << " ms\n";
+    std::cout << front2 << numMessages/(benchOneStats.mean/1000) << " messages per second\n";
     //std::cout << "-----------------\n" << "-Buy map:\n" << map_to_string(lobook.buy) << "\n\n-Sell map:\n" << map_to_string(lobook.sell) <<"\n-----------------\n";
     
-    lobook.clearBook();
-    std::vector<uint32_t> latencies_ns;
-    std::vector<std::string> types;
-    latencies_ns.resize(messageQ.size());
-    types.reserve(messageQ.size());
+    //-------------------------------------------------------
+    // INITIALISING FOR BENCHMARK 2
+    //-------------------------------------------------------
+    std::vector<uint32_t> overallLatencies_ns;
+    overallLatencies_ns.resize(messageQ.size());
+
+    // Reserve space based on probability of message - defined in message generation, see Utilities.hpp 
+    std::unordered_map<int, std::vector<uint32_t>> typeLatencies;
+    typeLatencies[0].reserve(0.55 * messageQ.size());
+    typeLatencies[1].reserve(0.15 * messageQ.size());
+    typeLatencies[2].reserve(0.3 * messageQ.size());
 
     std::cout << "\n------------\n";
     std::cout << "Beginning LOB benchmark 2 - Latency\n";
     //std::cout << "------------\n"; int count = 0;
     int ok;                                               
     
+
     for(int nxt = 0 ; nxt < messageQ.size() ; nxt++){
         auto msg = messageQ[nxt];
 
@@ -141,36 +134,30 @@ int  main() {
         //---------------------------------------------------------------------------------------
         // END MEASURE
         //---------------------------------------------------------------------------------------
-        latencies_ns[nxt] = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-        
-        // Leave this outside of the measure to reduce ns overhead
-        switch(ok) {
-            case 0: types[nxt] = "Insert";         // Insert returns 0 if it is a pure insert
-            case 1: types[nxt] = "Execution";      // Insert returns 1 if there is an execution
-            case 2: types[nxt] = "Cancel";         // Cancel returns 2 if successful
-        }
+        uint32_t measure = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+        overallLatencies_ns[nxt] = measure;
+        typeLatencies[ok].push_back(measure);
     }
+
+    lobook.clearBook();
 
     //---------------------------------------------------------------------------------------
 
     std::cout << "------------\nBenchmark 2 Complete. Stats:\n";
     
-    std::sort(latencies_ns.begin(), latencies_ns.end());
+    std::sort(overallLatencies_ns.begin(), overallLatencies_ns.end());
+    for(int i = 0; i < 3; i++) {std::sort(typeLatencies[i].begin(), typeLatencies[i].end());}
 
-    size_t n = latencies_ns.size();
-    uint32_t p50  = latencies_ns[n * 0.50];
-    uint32_t p99  = latencies_ns[n * 0.99];
-    uint32_t p999 = latencies_ns[n * 0.999];
-    uint32_t max  = latencies_ns.back();
-    
-    std::cout << "Number of messages: " << n << "\n";
-    std::cout << "Median/Average processing time: " << p50 << "ns\n";
-    std::cout << "99th Percentile processing time: " << p99 << "ns\n";
-    std::cout << "99.9th Percentile processing time: " << p999 << "ns\n";
-    std::cout << "Max processing time: " << max << "ns\n";    
+    T2stats overall = Stats::getBenchmarkTwoStats(overallLatencies_ns); T2stats fills = Stats::getBenchmarkTwoStats(typeLatencies[0]);
+    T2stats executions = Stats::getBenchmarkTwoStats(typeLatencies[1]); T2stats cancels = Stats:: getBenchmarkTwoStats(typeLatencies[2]);
+
+    Stats::printStatsTable(fills, cancels, executions, overall);
 
     return 0;
 }
+
+
+
 
 /*  OLD LOGIC FOR PARSING FILES - will probably put back in later
     std::string file = "Test.csv";

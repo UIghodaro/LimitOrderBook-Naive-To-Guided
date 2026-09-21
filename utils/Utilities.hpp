@@ -134,7 +134,7 @@ namespace Utils {
 
         return messages;
     }
-    
+
     //---------------------------------------------------------------------------------------
     // ORDERBOOK CORRECTNESS - BOOK VALIDATION FUNCTION
     //---------------------------------------------------------------------------------------
@@ -155,7 +155,7 @@ namespace Utils {
             OrderEvent{34200.400000,1,3002,150,290,-1},     // Price-time priority, order 1001: 100 -> 0 AND order 1004: 200 -> 150
             OrderEvent{34200.450000,1,3003,400,280,-1},     // Multi-level, order 1004: 150 -> 0 AND order 1005: 200 -> 0 AND order 1002: 150 -> 100
             OrderEvent{34200.500000,1,3004,100,280,-1},     // Total execution, order 1002: 100 -> 0
-            
+
             // Fill sell side
             OrderEvent{34200.600000,1,2001,100,340,-1},      
             OrderEvent{34200.650000,1,2002,150,320,-1},
