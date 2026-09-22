@@ -26,11 +26,11 @@ int  main() {
     auto messageQ = Utils::generateSyntheticMessages(numMessages, 42);
     std::cout<< "\nMessages Generated.\n---\n";
 
-    std::cout<<"Instantiating and validating book: LOB v1.5...\n";
+    std::cout<<"Instantiating and validating book...\n";
     //LOBV1 lobook;
     //LOBV1_5 lobook;
     LOBV1_75 lobook;
-    
+
     auto validation = Utils::validateBook(lobook);
     if (!validation) {
         std::cerr << "Book validation failed - invalid book logic found\n";
@@ -53,7 +53,7 @@ int  main() {
 
     //---------------------------------------------------------------------------------------
     std::cout << "------------\n";
-    std::cout << "Beginning LOB benchmark 1 - Throughput\n";
+    std::cout << "Beginning LOB benchmark 1 - Throughput (measured over " << numMessages << " messages):\n";
     std::vector<double> times;
     times.resize(numIterations);
 
@@ -115,7 +115,7 @@ int  main() {
     typeLatencies[2].reserve(0.3 * messageQ.size());
 
     std::cout << "\n------------\n";
-    std::cout << "Beginning LOB benchmark 2 - Latency\n";
+    std::cout << "Beginning LOB benchmark 2 - Latency (measured over " << numMessages << " messages):\n";
     //std::cout << "------------\n"; int count = 0;
     int ok;                                               
     

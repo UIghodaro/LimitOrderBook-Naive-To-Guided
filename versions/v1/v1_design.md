@@ -36,3 +36,16 @@ However, I want to try my hand at optimising some things in v1.0 which are coars
 3. **Update cancel** - Copy integers and use iterators \
 - So it turns out I fetched an object using an iterator, used the object to get the same piece of information multiple times and then used a key where I could have used the iterator itself... wow \
 - Rather than using ``it->second.price`` for map accessing operations, a hard copy ``int pricePoint`` is used instead and ID_price_book now erases orders using an already instantiated iterator, rather than the orderID key
+
+# V1.75 Design Decisions
+
+The idea for v1.75 was inspired by the perceived failure of 1.5. V1.5 seemed to have significantly increased cancel times, enough to offset the gains in speed for the average fill or execute operation. The conjecture was that deques are the issue and on further research - vectors guarantee contiguous slots of memory, while deques do not, this can cause [] or .at() operations to be less efficient (due to jumping around)
+
+### Main Change - Replace deque with vector and leave other changes/optimisations inplace
+
+I just reverted what needed to change because of deque (for instance, ``deque.pop_front()`` went back to ``vector.erase(vector.begin())``). \
+Ironically, this seemed to work almost instantly. I tested it over multiple runs of 1 million messages, one run of 10 million messages and this on both devices - while this pipeline of testing to compare v1.0 and v1.5 resulted in v1.5 more often than not underperforming, v1.75 consistently outperformed v1.0 in all runs (lower mean and similar-ish standard deviation). 
+
+### As such, v1.75 is deemed the capstone for version one
+
+There might be more small optimisations, but I'd rather go for a larger one and do the complete rewrite of LOB with different data structures... AKA v2.0
