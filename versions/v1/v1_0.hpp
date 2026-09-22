@@ -11,7 +11,7 @@
 #include <sstream>
 
 #include "../../utils/Logging.hpp"
-#include "bookObject.hpp"
+#include "../bookObject.hpp"
 
 class LOBV1 : public book{
     private:
