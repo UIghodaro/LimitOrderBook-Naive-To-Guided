@@ -39,7 +39,10 @@ However, I want to try my hand at optimising some things in v1.0 which are coars
 
 # V1.75 Design Decisions
 
-The idea for v1.75 was inspired by the perceived failure of 1.5. V1.5 seemed to have significantly increased cancel times, enough to offset the gains in speed for the average fill or execute operation. The conjecture was that deques are the issue and on further research - vectors guarantee contiguous slots of memory, while deques do not, this can cause [] or .at() operations to be less efficient (due to jumping around)
+The idea for v1.75 was inspired by the perceived failure of 1.5. V1.5 seemed to have significantly increased cancel times, enough to offset the gains in speed for the average fill or execute operation. The conjecture was that deques are the issue and on further research - vectors guarantee contiguous slots of memory, while deques do not, this can cause [] or .at() operations to be less efficient: \
+- For cancel operations, the book erases an order ``x`` in the queue, before shifting every order after ``x`` down 1 place in the queue to fill the empty space. \
+- In vectors, this can happen immediately as all data is next to each other, however in a deque it is possible that this data is segmented, add cache misses and moving all the data can take a decent amount of time longer. \
+- Since cancel is in the hot-path, this can compound a TON, hence why the average throughput is dragged down.
 
 ### Main Change - Replace deque with vector and leave other changes/optimisations inplace
 
