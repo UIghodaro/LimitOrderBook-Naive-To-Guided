@@ -7,7 +7,7 @@
 #include <set>
 
 #include "../versions/bookObject.hpp"
-#include "../versions/v1_0.hpp"
+#include "../versions/v1/v1_0.hpp"
 
 struct OrderEvent {
     double time;

@@ -2,8 +2,9 @@ data/
 versions/prototype/old.out
 versions/prototype/old.exe
 
-versions/v1_0.out
-versions/v1_0.exe
+versions/v1/v1_0.out
+versions/v1/v1_0.exe
+
 
 benchmark.out
 benchmark.exe

@@ -12,8 +12,9 @@
 #include "utils/statGetters.hpp"
 
 #include "versions/bookObject.hpp"
-#include "versions/v1_0.hpp"
-#include "versions/v1_5.hpp"
+#include "versions/v1/v1_0.hpp"
+#include "versions/v1/v1_5.hpp"
+#include "versions/v1/v1_75.hpp"
 
 
 int  main() {
@@ -27,7 +28,9 @@ int  main() {
 
     std::cout<<"Instantiating and validating book: LOB v1.5...\n";
     //LOBV1 lobook;
-    LOBV1_5 lobook;
+    //LOBV1_5 lobook;
+    LOBV1_75 lobook;
+    
     auto validation = Utils::validateBook(lobook);
     if (!validation) {
         std::cerr << "Book validation failed - invalid book logic found\n";
