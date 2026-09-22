@@ -21,18 +21,18 @@ class LOBV1_5 : public book{
         
         std::unordered_map<int, Detail> ID_price_book;
         
-        int BinarySearch(const std::deque<Order>* priceVector, double time){
-            if (priceVector->empty() || priceVector == nullptr) {
+        int BinarySearch(const std::deque<Order>* priceQueue, double time){
+            if (priceQueue->empty() || priceQueue == nullptr) {
                 return -1;
             }
             
             int left = 0;
-            int right = priceVector->size() - 1;
+            int right = priceQueue->size() - 1;
             
             while(left <= right){
                 
                 int mid = left + (right - left)/2;
-                double midTime = priceVector->at(mid).time;
+                double midTime = priceQueue->at(mid).time;
                 
                 if (midTime == time)                        {return mid;}
                     else if (midTime < time)                {left = mid + 1;}
@@ -41,60 +41,58 @@ class LOBV1_5 : public book{
                 
                 return -1;
             }
+
+        
+        // Reduce codewriting redundancy, also increase readability + make use of deque to reduce overhead
+        int executeHelper(std::map<int, std::deque<Order>>& map, int direction, Order& ord){
+            auto &[insideBookPrice, orders] = direction == 1 ? *map.begin() : *map.rbegin();          // Assign the pointer based on if you are checking sells or buys                   
+                        
+            while(!orders.empty()) {
+                Order &nextOrder = orders.front();
+
+                if(nextOrder.size < ord.size)       {LOG("Consume order " << nextOrder.OrderID << " of price " << insideBookPrice << ", count " << nextOrder.size << "\n"); 
+                                                        ord.size -= nextOrder.size;
+                                                        ID_price_book.erase(nextOrder.OrderID); orders.pop_front();}
+                else if(nextOrder.size == ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << insideBookPrice << ", count " << nextOrder.size << "\n"); 
+                                                        ID_price_book.erase(nextOrder.OrderID); orders.pop_front(); 
+                                                        if(direction == 1){map.erase(map.begin());} else{map.erase(std::prev(map.end()));}
+                                                        LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"); return 2;}
+                else                                {LOG("Consume " << ord.size << " from order " <<  nextOrder.OrderID << " of price " << insideBookPrice << "\n"); 
+                                                        nextOrder.size -= ord.size; 
+                                                        LOG("EXECUTED ORDER: " << ord.OrderID << ", size remaining of last order: " << nextOrder.size << "\n------------\n"); return 2;}                   
+            }
+            
+            if (direction == 1) {map.erase(map.begin());}
+            else                {map.erase(std::prev(map.end()));}
+            
+            return 0;
+        }
         
         public:
             // Return certain ints so that we know if an execution is completed (and as such can measure execution times)
             // Return 0 = No executions
             // Return 1 = partial execution
             // Return 2 = Total execution
-            int executeOrder(Order &ord, int price, int direction) {
+            int executeOrder(Order& ord, int price, int direction) {
                 if(direction == 1) {
                     // No executions
-                    if (sell.empty() || price < sell.begin()->first) {
-                    return 0; 
-                    }
+                    if (sell.empty() || price < sell.begin()->first) {return 0;}
 
-                    if(price >= sell.begin()->first){
-                        LOG("------------\nEXECUTING BUY ORDER: " << ord.OrderID << " of size: " << ord.size << " and price: " << price << "\n");
-                        while(ord.size > 0 && !sell.empty() && price >= sell.begin()->first){
-                            auto &[cheapestSell, orders] = *sell.begin();                   
-                            
-                            while(!orders.empty()) {
-                                Order &nextOrder = orders.front();
-
-                                if(nextOrder.size < ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestSell << ", count " << nextOrder.size << "\n"); ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
-                                else if(nextOrder.size == ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestSell << ", count " << nextOrder.size << "\n"); ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); sell.erase(sell.begin()); LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"); return 2;}
-                                else                      {LOG("Consume " << ord.size << " from order " <<  nextOrder.OrderID << " of price " << cheapestSell << "\n"); nextOrder.size -= ord.size; LOG("EXECUTED ORDER: " << ord.OrderID << ", size remaining of last order: " << nextOrder.size << "\n------------\n"); return 2;}                   
-                            }
-                            
-                            sell.erase(sell.begin());
-                        }
-                        LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n");
+                    LOG("------------\nEXECUTING BUY ORDER: " << ord.OrderID << " of size: " << ord.size << " and price: " << price << "\n");
+                    while(ord.size > 0 && !sell.empty() && price >= sell.begin()->first){
+                        if(executeHelper(sell, 1, ord)) {return 2;}         // executeHelper returns a value IFF the order is exhausted
                     }
+                    LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n");
                 }
 
                 else {
-                    if (buy.empty() || price > buy.rbegin()->first) {
-                        return 0; 
-                    }
+                    if (buy.empty() || price > buy.rbegin()->first) {return 0;}
                     
-                    if(price <= buy.rbegin()->first){
-                        LOG("------------\nEXECUTING SELL ORDER: " << ord.OrderID << " of size: " << ord.size << " and price: " << price << "\n");
-                        while(ord.size > 0 && !buy.empty() && price <= buy.rbegin()->first){
-                            auto &[cheapestBuy, orders] = *buy.rbegin();                   
-                            
-                            while(!orders.empty()) {
-                                Order &nextOrder = orders.front();
-
-                                if(nextOrder.size < ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestBuy << ", count " << nextOrder.size << "\n"); ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
-                                else if(nextOrder.size == ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestBuy << ", count " << nextOrder.size << "\n"); ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); buy.erase(std::prev(buy.end())); LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"); return 2;}
-                                else                      {LOG("Consume " << ord.size << " from order " <<  nextOrder.OrderID << " of price " << cheapestBuy << "\n"); nextOrder.size -= ord.size;LOG("EXECUTED ORDER: " << ord.OrderID << ", size remaining of last order: " << nextOrder.size << "\n------------\n"); return 2;}                   
-                            }
-                            
-                            buy.erase(std::prev(buy.end()));
-                        }
-                        LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n");
+                    LOG("------------\nEXECUTING SELL ORDER: " << ord.OrderID << " of size: " << ord.size << " and price: " << price << "\n");
+                    while(ord.size > 0 && !buy.empty() && price <= buy.rbegin()->first){
+                        if(executeHelper(buy, -1, ord)) {return 2;}
                     }
+                    LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n");
                 }
 
                 return 1;
@@ -123,25 +121,26 @@ class LOBV1_5 : public book{
                 // If the order already doesn't exist then exit early
                 if (it == ID_price_book.end())  {return 1;}
 
-                double time = ID_price_book[orderID].time;
-                std::vector<Order>* priceVector;
+                int pricePoint = it->second.price;
+                double time = it->second.time;
+                std::deque<Order>* priceQueue;
             
                 if(direction == 1) {
-                    if(buy[it->second.price].size() == 1 && (TOTAL ||buy[it->second.price].at(0).size <= size)) {buy.erase(it->second.price); ID_price_book.erase(orderID);return 2;} 
-                    else                                                                                        {priceVector = &buy[it->second.price];}
+                    if(buy[pricePoint].size() == 1 && (TOTAL ||buy[pricePoint].at(0).size <= size)) {buy.erase(pricePoint); ID_price_book.erase(it);return 2;} 
+                    else                                                                            {priceQueue = &buy[pricePoint];}
                 }
 
                 else {
-                    if(sell[it->second.price].size() == 1 && (TOTAL || sell[it->second.price].at(0).size <= size))  {sell.erase(it->second.price); ID_price_book.erase(orderID);return 2;} 
-                    else                                                                                            {priceVector = &sell[it->second.price];}
+                    if(sell[pricePoint].size() == 1 && (TOTAL || sell[pricePoint].at(0).size <= size))  {sell.erase(pricePoint); ID_price_book.erase(it);return 2;} 
+                    else                                                                                {priceQueue = &sell[pricePoint];}
                 }
 
-                int id = BinarySearch(priceVector, time);
+                int id = BinarySearch(priceQueue, time);
+                
+                if(id == -1 || priceQueue->at(id).OrderID != orderID) {return -1;}          // Is this needed? It's never really failed b4 and is an extra linear search
 
-                if(id == -1 || priceVector->at(id).OrderID != orderID) {return -1;} 
-
-                if(TOTAL || priceVector->at(id).size <= size) {priceVector->erase(priceVector->begin() + id); ID_price_book.erase(orderID); return 2;}
-                else                                          {priceVector->at(id).size -= size; return 2;}
+                if(TOTAL || priceQueue->at(id).size <= size) {priceQueue->erase(priceQueue->begin() + id); ID_price_book.erase(it); return 2;}
+                else                                          {priceQueue->at(id).size -= size; return 2;}
 
                 return -1;
             }

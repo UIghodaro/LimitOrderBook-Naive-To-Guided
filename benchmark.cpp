@@ -13,18 +13,21 @@
 
 #include "versions/bookObject.hpp"
 #include "versions/v1_0.hpp"
+#include "versions/v1_5.hpp"
 
 
 int  main() {
     //---------------------------------------------------------------------------------------
     // INITIALISING
     //---------------------------------------------------------------------------------------
-    int numMessages = 10'000'000;
+    int numMessages = 1'000'000;
     std::cout << "Generating messages...";
     auto messageQ = Utils::generateSyntheticMessages(numMessages, 42);
-    std::cout<< "\nMessages Generated.\n---\nInstantiating and validating book...\n";
+    std::cout<< "\nMessages Generated.\n---\n";
 
-    LOBV1 lobook;
+    std::cout<<"Instantiating and validating book: LOB v1.5...\n";
+    //LOBV1 lobook;
+    LOBV1_5 lobook;
     auto validation = Utils::validateBook(lobook);
     if (!validation) {
         std::cerr << "Book validation failed - invalid book logic found\n";
@@ -81,7 +84,7 @@ int  main() {
         //---------------------------------------------------------------------------------------
     
         auto end = std::chrono::high_resolution_clock::now();
-        std::cout <<"-- RUN " << iteration+1 << " COMPLETE.\n";
+        std::cout <<"-- RUN " << iteration+1 << "/" << numIterations << " COMPLETE.\n";
         //---------------------------------------------------------------------------------------
         std::chrono::duration<double,std::milli> elapsed = end-start;
         times[iteration] = elapsed.count();
