@@ -50,7 +50,13 @@ class LOBV2 : public book{
         int executeOrder(Order &ord, int price, int direction) {;}
 
         int insertOrder(int direction, int price, int orderID, int size, double time) {
+            
+            // Same logic as v1
             Order newOrder{orderID, time, size, nullptr, nullptr, nullptr};
+            int process = executeOrder(newOrder, price, direction);
+            if(process == 2) {return 1;}
+
+            // Then begin v2 tree insertion logic
             std::unordered_map<int, Price*>& lookupMap = direction == 1 ? buyPrices : sellPrices;
             Order* priceTailPtr = lookupMap[price]->tailOrder;
             
@@ -73,6 +79,8 @@ class LOBV2 : public book{
                 
             }
 
+            // Regardless of if the price level exists, you must leave a reference to the order for quick cancellations
+            orderMap[orderID] = &newOrder;
             return 0;
         }
 

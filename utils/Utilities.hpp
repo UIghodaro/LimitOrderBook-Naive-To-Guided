@@ -187,11 +187,10 @@ namespace Utils {
         };
 
         LOBV1 validator;                        // LOB version 1 has been confirmed to have correct logic, therefore use it as the validator
+        std::string debug;
 
         for(int nxt = 0 ; nxt < testCases.size() ; nxt++){
-            // Most important columns in order: type -> direction -> price/orderID (Insert or Cancel) -> size (for partial deletion) -> time (most relevant during executions, which are comparatively rare)
             auto msg = testCases[nxt];
-            std::string debug;
 
             switch(msg.type) {                                               // Strings are basically lists/vectors. Hence it's type[0] which is jarring
                 case 1:                                                      // New Limit Order
@@ -200,18 +199,31 @@ namespace Utils {
                     validator.insertOrder(msg.direction, msg.price, msg.orderID, msg.size, msg.time);
                     break;
                 case 2:                                                   // Cancel Limit Orders (Partial Deletion)
-                    debug = "CANCEL";
+                    debug = "CANCEL (partial)";
                     lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 0);
                     validator.cancelOrder(msg.direction, msg.orderID, msg.size, 0);
                     break;
                 case 3:                                                   // Cancel Limit Orders (Total Deletion, set TOTAL to 1 and immediately erase)
-                    debug = "CANCEL";
+                    debug = "CANCEL (total)";
                     lobook.cancelOrder(msg.direction, msg.orderID, msg.size, 1);
                     validator.cancelOrder(msg.direction, msg.orderID, msg.size, 1);
                     break;
             }
 
-            if(lobook.currentBook() != validator.currentBook()) {std::cout << "Validation Failed at " << debug; return false;}
+            // AI'd
+            if(lobook.currentBook() != validator.currentBook()) {
+            std::cerr << "----------------------------------------\n"
+                       << "VALIDATION FAILED at test case #" << nxt+1 << " (" << debug << ")\n"
+                       << "Message: type= " << msg.type << " orderID= " << msg.orderID
+                       << " size= " << msg.size << " price= " << msg.price
+                       << " direction= " << msg.direction << " time= " << msg.time << "\n"
+                       << "----------------------------------------\n"
+                       << "Expected (validator/v1.0) state:\n" << validator.currentBook() << "\n"
+                       << "----------------------------------------\n"
+                       << "Actual (" << typeid(lobook).name() << ") state:\n" << lobook.currentBook() << "\n"
+                       << "----------------------------------------\n";
+            return false;
+        }
         }
 
         return true;
