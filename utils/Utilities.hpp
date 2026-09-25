@@ -212,11 +212,13 @@ namespace Utils {
 
             // AI'd
             if(lobook.currentBook() != validator.currentBook()) {
-            std::cerr << "----------------------------------------\n"
+            std::cerr  << "----------------------------------------\n"
                        << "VALIDATION FAILED at test case #" << nxt+1 << " (" << debug << ")\n"
                        << "Message: type= " << msg.type << " orderID= " << msg.orderID
                        << " size= " << msg.size << " price= " << msg.price
                        << " direction= " << msg.direction << " time= " << msg.time << "\n"
+                       << "----------------------------------------\n"
+                       << "Test cases passed: " << nxt << "\n"
                        << "----------------------------------------\n"
                        << "Expected (validator/v1.0) state:\n" << validator.currentBook() << "\n"
                        << "----------------------------------------\n"

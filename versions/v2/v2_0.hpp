@@ -3,7 +3,6 @@
 #include <iostream>
 #include <string>
 
-#include <map>
 #include <unordered_map>
 #include <vector>
 
@@ -12,29 +11,31 @@
 
 #include "../../utils/Logging.hpp"
 #include "../bookObject.hpp"
+#include <stack>
 
-class Price;                    // Forward-declaration, avoids errors
-
-struct Order{
-    int orderID;
-    double time;
-    int size;
-    Order *nextOrder;
-    Order *prevOrder;
-    Price *parentPrice;
-};
-
-struct Price{
-    int limitPrice;
-    Price *parent;
-    Price *leftChild;
-    Price *rightChild;
-    Order *headOrder;           // Hold this for faster exections
-    Order *tailOrder;           // This tells us where the end of the linkedlist is right? Is that why we hold onto it?
-};
 
 class LOBV2 : public book{
     private:
+        struct Price;                    // Forward-declaration, avoids errors
+        
+        struct Order{
+            int orderID;
+            double time;
+            int size;
+            Order *nextOrder;
+            Order *prevOrder;
+            Price *parentPrice;
+        };
+        
+        struct Price{
+            int limitPrice;
+            Price *parent;
+            Price *leftChild;
+            Price *rightChild;
+            Order *headOrder;           // Hold this for faster exections
+            Order *tailOrder;           // This tells us where the end of the linkedlist is right? Is that why we hold onto it?
+        };
+        
         Price *buyTree;
         Price *sellTree;
         Price *lowestSell;      // Always have pointers to the best bid or ask so that execution can happen quickly. If it exhausts then simply move to the parent
@@ -45,9 +46,49 @@ class LOBV2 : public book{
         std::unordered_map<int, Price*> buyPrices;
         std::unordered_map<int, Order*> orderMap;
 
+        // InOrder traversal via iteration, I admit I consulted geeksforgeeks for this
+        std::string traversePrint(Price* root) {
+            std::string out = "";
+            std::string output = "";
+
+            Price* curr = root;
+            std::stack<Price*> stack;
+
+            while(!stack.empty() || curr != nullptr){
+                while (curr != nullptr) {
+                    stack.push(curr);
+                    curr = curr->leftChild;
+                }
+
+                // Reach this when you are at a point thatt is as left as possible and hasn't been parsed 
+                curr = stack.top(); stack.pop();
+                std::string convrt = "";
+                Order* nxtOrder = curr->headOrder;
+                
+                // Loop through the order queue, appending details of each order
+                while(nxtOrder != nullptr){
+                    convrt += " [id: " + std::to_string(nxtOrder->orderID) + 
+                            ", sz: " + std::to_string(nxtOrder->size) + 
+                            ", tm: " + std::to_string(nxtOrder->time) + "], ";
+
+                    nxtOrder = nxtOrder->nextOrder;
+                }
+
+                output += std::to_string(curr->limitPrice) + ":" + (convrt) + "\n-\n";
+                if (output.size() >= 3) {
+                    output.resize(output.size() - 3);
+                }
+                out += output;
+
+                curr = curr->rightChild;
+            }
+
+            return out;
+        }
+
 
     public:
-        int executeOrder(Order &ord, int price, int direction) {;}
+        int executeOrder(Order &ord, int price, int direction) {return 0;}
 
         int insertOrder(int direction, int price, int orderID, int size, double time) {
             
@@ -58,9 +99,9 @@ class LOBV2 : public book{
 
             // Then begin v2 tree insertion logic
             std::unordered_map<int, Price*>& lookupMap = direction == 1 ? buyPrices : sellPrices;
-            Order* priceTailPtr = lookupMap[price]->tailOrder;
             
-            if(priceTailPtr != nullptr) {                   // If price level exists - O(1)
+            if(lookupMap[price] != nullptr && lookupMap[price]->tailOrder != nullptr) {                   // If price level exists - O(1)
+                Order* priceTailPtr = lookupMap[price]->tailOrder;
 
                 priceTailPtr->nextOrder = &newOrder;        // Provide a link from the current end of the list to this order
                 newOrder.prevOrder = priceTailPtr;          // Provide a link from the order back to the list (double linkage)
@@ -76,7 +117,7 @@ class LOBV2 : public book{
                 }
 
                 Price newPrice{price, nextNodePtr->parent, nullptr, nullptr, &newOrder, &newOrder};
-                
+                lookupMap[price] = &newPrice;
             }
 
             // Regardless of if the price level exists, you must leave a reference to the order for quick cancellations
@@ -84,8 +125,23 @@ class LOBV2 : public book{
             return 0;
         }
 
-        int cancelOrder(int direction, int orderID, int size, int TOTAL) {;}
+        int cancelOrder(int direction, int orderID, int size, int TOTAL) { return 2; }
 
-        void clearBook() = 0;
-        std::string currentBook() = 0;
+        void clearBook() {
+            buyTree = nullptr; sellTree = nullptr; 
+            lowestSell = nullptr; highestBuy = nullptr;
+            sellPrices.clear(); buyPrices.clear(); orderMap.clear();
+        }
+
+        // InOrder traversal via iteration, I admit I consulted geeksforgeeks for this
+        std::string currentBook() {
+            // Buy Tree parsing initialisation
+            std::string out = "";
+
+            out += traversePrint(buyTree);
+            out += "\n---\n";
+            out += traversePrint(sellTree);
+            return out;
+            
+        }
 };

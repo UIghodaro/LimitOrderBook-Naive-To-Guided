@@ -13,8 +13,9 @@
 
 #include "versions/bookObject.hpp"
 #include "versions/v1/v1_0.hpp"
-#include "versions/v1/v1_5.hpp"
-#include "versions/v1/v1_75.hpp"
+//#include "versions/v1/v1_5.hpp"
+//#include "versions/v1/v1_75.hpp"
+#include "versions/v2/v2_0.hpp"
 
 
 int  main() {
@@ -26,10 +27,12 @@ int  main() {
     auto messageQ = Utils::generateSyntheticMessages(numMessages, 42);
     std::cout<< "\nMessages Generated.\n---\n";
 
-    std::cout<<"Instantiating and validating book...\n";
     //LOBV1 lobook;
     //LOBV1_5 lobook;
-    LOBV1_75 lobook;
+    //LOBV1_75 lobook;
+    LOBV2 lobook;
+    
+    std::cout<<"Instantiating and validating book " << typeid(lobook).name() << " ...\n";
 
     auto validation = Utils::validateBook(lobook);
     if (!validation) {

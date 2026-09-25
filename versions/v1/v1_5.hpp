@@ -14,8 +14,20 @@
 #include "../../utils/Logging.hpp"
 #include "../bookObject.hpp"
 
+
 class LOBV1_5 : public book{
     private:
+        struct Order {                                      
+            int OrderID;                         
+            double time;                         
+            int size;
+        };
+        
+        struct Detail {
+            int price;
+            double time;
+        };
+        
         std::map<int, std::deque<Order>> buy;
         std::map<int, std::deque<Order>> sell;
         
@@ -158,7 +170,6 @@ class LOBV1_5 : public book{
                 // Buy Map first
                 if(!buy.empty()) {
                     std::string output = "";
-                    std::string result = "";
                     
                     for (auto it = buy.cbegin(); it != buy.cend(); it++) {
                         std::string convrt = "";
@@ -182,7 +193,6 @@ class LOBV1_5 : public book{
                 // Now Sell map
                 if(!sell.empty()) {
                     std::string output = "";
-                    std::string result = "";
                     
                     for (auto it = sell.cbegin(); it != sell.cend(); it++) {
                         std::string convrt = "";
