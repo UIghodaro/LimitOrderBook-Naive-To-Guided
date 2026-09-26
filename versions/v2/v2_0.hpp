@@ -36,10 +36,10 @@ class LOBV2 : public book{
             Order *tailOrder;           // This tells us where the end of the linkedlist is right? Is that why we hold onto it?
         };
         
-        Price *buyTree;
-        Price *sellTree;
-        Price *lowestSell;      // Always have pointers to the best bid or ask so that execution can happen quickly. If it exhausts then simply move to the parent
-        Price *highestBuy;
+        Price* buyTree = nullptr;
+        Price* sellTree = nullptr;
+        Price* lowestSell;      // Always have pointers to the best bid or ask so that execution can happen quickly. If it exhausts then simply move to the parent
+        Price* highestBuy;
 
         // Quick lookup pointers
         std::unordered_map<int, Price*> sellPrices;
@@ -48,7 +48,6 @@ class LOBV2 : public book{
 
         // InOrder traversal via iteration, I admit I consulted geeksforgeeks for this
         std::string traversePrint(Price* root) {
-            std::string out = "";
             std::string output = "";
 
             Price* curr = root;
@@ -75,53 +74,63 @@ class LOBV2 : public book{
                 }
 
                 output += std::to_string(curr->limitPrice) + ":" + (convrt) + "\n-\n";
-                if (output.size() >= 3) {
-                    output.resize(output.size() - 3);
-                }
-                out += output;
-
+                
                 curr = curr->rightChild;
             }
+            
+            if (output.size() >= 3) {
+                    output.resize(output.size() - 3);
+            }
 
-            return out;
+            return output;
         }
 
 
     public:
-        int executeOrder(Order &ord, int price, int direction) {return 0;}
+        int executeOrder(Order* ord, int price, int direction) {return 0;}
 
         int insertOrder(int direction, int price, int orderID, int size, double time) {
             
             // Same logic as v1
-            Order newOrder{orderID, time, size, nullptr, nullptr, nullptr};
+            Order* newOrder = new Order{orderID, time, size, nullptr, nullptr, nullptr};            // !!!!!!!!!!!!!! REMEMBER TO CLEAN !!!!!!!!!!!!!!
             int process = executeOrder(newOrder, price, direction);
             if(process == 2) {return 1;}
 
             // Then begin v2 tree insertion logic
             std::unordered_map<int, Price*>& lookupMap = direction == 1 ? buyPrices : sellPrices;
             
-            if(lookupMap[price] != nullptr && lookupMap[price]->tailOrder != nullptr) {                   // If price level exists - O(1)
+            if(lookupMap[price] != nullptr) {               // If price level exists - O(1)
                 Order* priceTailPtr = lookupMap[price]->tailOrder;
 
-                priceTailPtr->nextOrder = &newOrder;        // Provide a link from the current end of the list to this order
-                newOrder.prevOrder = priceTailPtr;          // Provide a link from the order back to the list (double linkage)
-                lookupMap[price]->tailOrder = &newOrder;    // Update so that the tail is now the newly inserted order
+                priceTailPtr->nextOrder = newOrder;         // Provide a link from the current end of the list to this order
+                newOrder->prevOrder = priceTailPtr;          // Provide a link from the order back to the list (double linkage)
+                lookupMap[price]->tailOrder = newOrder;     // Update so that the tail is now the newly inserted order
 
             } else {                                        // If price level is not already in tree - traverse and place O(log M) where M is the number of price levels in the tree
 
                 Price* nextNodePtr = direction == 1 ? buyTree : sellTree;
-                
-                while (nextNodePtr != nullptr) {            // Traverse to find the right place to slot in the price level. 
-                    if(price > nextNodePtr->limitPrice) {nextNodePtr = nextNodePtr->rightChild;}
-                    else                                {nextNodePtr = nextNodePtr->leftChild;}
-                }
 
-                Price newPrice{price, nextNodePtr->parent, nullptr, nullptr, &newOrder, &newOrder};
-                lookupMap[price] = &newPrice;
+                if (nextNodePtr != nullptr) {
+                    Price* prevPtr; bool wasRight = false;      // If nextNodePtr is the right child, this is True, else it is false
+                    while (nextNodePtr != nullptr) {            // Traverse to find the right place to slot in the price level.
+                        prevPtr = nextNodePtr;                  // Track the previous pointer so that the correct adult can be assigned
+                        if(price > nextNodePtr->limitPrice) {nextNodePtr = nextNodePtr->rightChild; wasRight = true;}
+                        else                                {nextNodePtr = nextNodePtr->leftChild; wasRight = false;}
+                    }
+
+                    nextNodePtr = new Price{price, prevPtr, nullptr, nullptr, newOrder, newOrder};        // !!!!!!!!!!!!!! REMEMBER TO CLEAN !!!!!!!!!!!!!!
+                    if(wasRight) {prevPtr->rightChild = nextNodePtr;}
+                    else         {prevPtr->leftChild = nextNodePtr;}
+                    lookupMap[price] = nextNodePtr;
+                } else {
+                    if(direction == 1){buyTree = new Price{price, nullptr, nullptr, nullptr, newOrder, newOrder}; lookupMap[price] = buyTree;}
+                    else              {sellTree = new Price{price, nullptr, nullptr, nullptr, newOrder, newOrder}; lookupMap[price] = sellTree;}
+                }
             }
 
-            // Regardless of if the price level exists, you must leave a reference to the order for quick cancellations
-            orderMap[orderID] = &newOrder;
+            // Regardless of if the price level exists or not, the following allocations must happen
+            newOrder->parentPrice = lookupMap[price];
+            orderMap[orderID] = newOrder;
             return 0;
         }
 
