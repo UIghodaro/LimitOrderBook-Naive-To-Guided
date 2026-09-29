@@ -133,7 +133,7 @@ class LOBV1 {
                         if(nextOrder.size < ord.size) {ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
 
                         // Avoid size 0 orders in the order queue
-                        else if(nextOrder.size == ord.size) {ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); sell.erase(sell.begin()); return false;}
+                        else if(nextOrder.size == ord.size) {ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); if(orders.empty()){sell.erase(sell.begin()); return false;}
 
                         // If the order is satisfied however, just update the front of the top of the map and then end
                         else                      {nextOrder.size -= ord.size; return false;}                   

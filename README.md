@@ -1,6 +1,26 @@
-# Work in progress, but here's how to run it
+## Limit Order Book - Naive-to-Guided
+**Summary**: A price matching orderbook project iterated over different stages. Version 1 is created using minimal online guidance/pointers (the main guidance was the definition of what an LOB is and what it should do) while version 2 is based on a recommended structure online. Future iterations will be further guided by online guides/recommendations. 
+
+### Motivation
+When a stock is public and can be traded on the market, up to millions of people or companies may send bid/ask messages for this stock each second. It is therefore required that these messages are handled both *correctly* and also *efficiently* so that all satisfiable bid-ask executions (where someone makes a market order that goes through) go through on time.\
+
+This project aims to iteratively build toward implementing an orderbook that meets industry standards of optimal processing time and serves as a hands-on study in systems performance - identifying bottlenecks through measurement and progressing toward lower-latency designs.
+
+### What's included
+Main file structure:
+- ``benchmark.cpp`` - Main file; implements a suite that tests an instantiated orderbook for correctness in logic, then efficiency in parsing millions of synthetic messages. \
+-- Useful statistics such as Average throughput +- Standard Deviations and average processing time per message received/action completed are printed to the console.
+- ``utils\`` - Contains header files implementing helper functions, such as the synthetic mesasge generator and book validator
+- ``versions\`` - Contains all implemented versions of orderbook and some design commentary behind them.\
+-- ``versions\v1\v1_design.md`` currently records the profiling-driven design that led to speedups from v1.0 to v1.75 
+- ``benchmarkArtefacts\`` - Contains screenshots of runs from the single machine that has been used for all benchmark recording thus far
+
+### Requirements
+- The g++ compiler for C++, running with C++17 or later
+
+### Running the benchmark suite
 ```bash
-# For Mac/Linux
+# For Mac/Linux devices
 g++ -O3 -o benchmark.out benchmark.cpp
 ./benchmark.out
 
@@ -8,42 +28,10 @@ g++ -O3 -o benchmark.out benchmark.cpp
 g++ -DVERBOSE -O3 -o benchmark.out benchmark.cpp
 ```
 ```bash
-# For windows
+# For windows devices
 g++ -O3 -o benchmark.exe benchmark.cpp
 ./benchmark.exe
 
 # Verbose compilation argument
 g++ -DVERBOSE -O3 -o benchmark.exe benchmark.cpp
 ```
-# Quick Note: Benchmark.cpp
-I was deciding how to create a good set of synthetic datapoints, I initially thought "random points in a range is too shallow, a random walk/brownian motion would just go to + or - infinity - do we just map the stocks using a distribution? Like generate price points using N~(1000, sigma) for some sigma. Apparently that's worse cause given enough datapoints, you'll never end up with an empty price level - which intuitively makes sense. \
-The answer is modelling a random walk around a price point with some kind of "hook" or "bias" which pulls the walk back to a historical mean - as such, it does not diverge in the long run.  \
-**Apparently, this is known as mean reversion** (or the Ornstein-Uhlenbeck process) - quite cool.
-
-### Designing Synthetic Data
-[*Order Message Structure: ``Time | Type | ID | Size | Price | Direction``*] \
-All synthetic data will be loaded into a vector before the benchmark begins running.
-
-Synthetic must adhere to the following:
-- Orders must enter the vector in monotonically increasing time (naturally)
-- Upon analysis of datasets available to me and online descriptions, it seems that \
--- The majority of messages are inserts and TOTAL deletions \
--- There is a decent number of partial deletions, but not many \
--- The number of market executions should be less, in proportion, to the number of cancels and number of inserts \
-- Order sizes generally have a cap (people aren't insane), however there are more common levels than others
-- Order prices generally hover around a specific level. This is solved by **mean reversion** which was detailed earlier
-- Direction ratios depend on the stock bought, there must be a controlled randomness to it though so that we don't end up with 9M buy orders and 1M sell orders with no interaction
-
-As such, we design the message generator as follows:
-1. Calculate a random number
-2. Use this random number in 2 ways - add a scaled form of it to the ``time`` and to determine order ``size``; also use it as a seed which generates: Probability `x` for ``insert/cancel (type)``, probability `y` for order ``aggressiveness``, probability `z` for order ``direction``
-3. Probability `x` decides if an order should be an insert or cancel, probability `y` decides if the 
-4. Probability `x` is informed by a data structure holding the set of current open orders - if probability `x` surpasses a threshold and there are open orders, then one of the existing orders will be selected at random for partial or total deletion, which is again decided on an internal threshold on `x`
-
-
-- Test.csv: \
--- Rows 1-6 fill the book to a nice rest (both books, 3 price levels, 1 item per level) \
--- Rows 7-8 test total and partial cancels
--- row 9-11 Switching up resting prices
--- row 12 Increase price vector to 2
--- row 13-14 Test price-time priority 

@@ -65,13 +65,14 @@ class LOBV1_75 : public book{
                                                         ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
                 else if(nextOrder.size == ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << insideBookPrice << ", count " << nextOrder.size << "\n"); 
                                                         ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); 
-                                                        if(direction == 1){map.erase(map.begin());} else{map.erase(std::prev(map.end()));}
+                                                        if(orders.empty()){if(direction == 1){map.erase(map.begin());} else{map.erase(std::prev(map.end()));}}
                                                         LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"); return 2;}
                 else                                {LOG("Consume " << ord.size << " from order " <<  nextOrder.OrderID << " of price " << insideBookPrice << "\n"); 
                                                         nextOrder.size -= ord.size; 
                                                         LOG("EXECUTED ORDER: " << ord.OrderID << ", size remaining of last order: " << nextOrder.size << "\n------------\n"); return 2;}                   
             }
             
+            // You will necessarily only make it here if orders is empty
             if (direction == 1) {map.erase(map.begin());}
             else                {map.erase(std::prev(map.end()));}
             

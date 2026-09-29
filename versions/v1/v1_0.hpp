@@ -74,7 +74,7 @@ class LOBV1 : public book{
                                 Order &nextOrder = orders.front();
 
                                 if(nextOrder.size < ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestSell << ", count " << nextOrder.size << "\n"); ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
-                                else if(nextOrder.size == ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestSell << ", count " << nextOrder.size << "\n"); ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); sell.erase(sell.begin()); LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"); return 2;}
+                                else if(nextOrder.size == ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestSell << ", count " << nextOrder.size << "\n"); ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); if(orders.empty()){sell.erase(sell.begin());} LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"); return 2;}
                                 else                      {LOG("Consume " << ord.size << " from order " <<  nextOrder.OrderID << " of price " << cheapestSell << "\n"); nextOrder.size -= ord.size; LOG("EXECUTED ORDER: " << ord.OrderID << ", size remaining of last order: " << nextOrder.size << "\n------------\n"); return 2;}                   
                             }
                             
@@ -98,7 +98,7 @@ class LOBV1 : public book{
                                 Order &nextOrder = orders.front();
 
                                 if(nextOrder.size < ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestBuy << ", count " << nextOrder.size << "\n"); ord.size -= nextOrder.size; ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin());}
-                                else if(nextOrder.size == ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestBuy << ", count " << nextOrder.size << "\n"); ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); buy.erase(std::prev(buy.end())); LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"); return 2;}
+                                else if(nextOrder.size == ord.size) {LOG("Consume order " << nextOrder.OrderID << " of price " << cheapestBuy << ", count " << nextOrder.size << "\n"); ID_price_book.erase(nextOrder.OrderID); orders.erase(orders.begin()); if(orders.empty()){buy.erase(std::prev(buy.end()))}; LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"); return 2;}
                                 else                      {LOG("Consume " << ord.size << " from order " <<  nextOrder.OrderID << " of price " << cheapestBuy << "\n"); nextOrder.size -= ord.size;LOG("EXECUTED ORDER: " << ord.OrderID << ", size remaining of last order: " << nextOrder.size << "\n------------\n"); return 2;}                   
                             }
                             

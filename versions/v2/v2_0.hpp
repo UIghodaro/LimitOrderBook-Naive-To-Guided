@@ -22,8 +22,9 @@ class LOBV2 : public book{
             int orderID;
             double time;
             int size;
-            Order *nextOrder;
-            Order *prevOrder;
+            int limitPrice;
+            Order *next;
+            Order *prev;
             Price *parentPrice;
         };
         
@@ -87,12 +88,55 @@ class LOBV2 : public book{
 
 
     public:
-        int executeOrder(Order* ord, int price, int direction) {return 0;}
+        int executeOrder(Order* ord, int price, int direction) {
+            int executed = 1;
+
+            if (direction == 1) {
+                if(lowestSell == nullptr || price < lowestSell->limitPrice) {return 0;}
+
+                LOG("------------\nEXECUTING BUY ORDER: " << ord->orderID << " of size: " << ord->size << " and price: " << price << "\n");
+
+                while(ord->size > 0 && lowestSell != nullptr && price >= lowestSell->limitPrice) {
+                    Order* nextOrder = lowestSell->headOrder;
+                    while(nextOrder != nullptr) {
+                        if(nextOrder->size < ord->size)     {LOG("Consume order " << nextOrder->OrderID << " of price " << nextOrder->limitPrice << ", count " << nextOrder->size << "\n");
+                                                             ord->size -= nextOrder->size; 
+                                                             orderMap.erase(nextOrder->orderID); lowestSell->headOrder = nextOrder->next; delete nextOrder;}
+                        else if(nextOrder->size = ord->size){LOG("Consume order " << nextOrder->OrderID << " of price " << nextOrder->limitPrice << ", count " << nextOrder->size << "\n");
+                                                             orderMap.erase(nextOrder->OrderID); lowestSell->headOrder = nextOrder->next; delete nextOrder; 
+                                                             if(lowestSell->headOrder == nullptr){} 
+                                                             LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n"); executed = 2;}
+                        else                                {LOG("Consume " << ord.size << " from order " <<  nextOrder.OrderID << " of price " << nextOrder->limitPrice << "\n"); 
+                                                             nextOrder.size -= ord.size; 
+                                                             LOG("EXECUTED ORDER: " << ord->OrderID << ", size remaining of last order: " << nextOrder->size << "\n------------\n"); executed = 2;}                   
+                    
+                    }
+
+                    if(nextOrder == nullptr){
+                        // The lowest sell is ALWAYS the leftmost child of a subtree, then when the leftmost child is gone, it is the parent node. After that it is the right child.
+                        // Thus, if you are currently at a node which has a right child, then the right child is the next lowest and must be linked to.
+                        // Otherwise, then it is the left child of some subtree - the parent is the next lowest
+                        if(lowestSell->rightChild != nullptr){ 
+                            lowestSell->rightChild->parent = lowestSell->parent;        // Make the right child point to the parent
+                            lowestSell->parent->leftChild = lowestSell->rightChild;     // Make the parent point to the right child (as its left child)
+                            Price* toDelete = lowestSell; 
+                            lowestSell = lowestSell->rightChild; 
+                            delete toDelete;
+                        }
+                    }
+                }
+
+                LOG("EXECUTED ORDER: " << ord.OrderID << ", size after: " << ord.size << "\n------------\n");
+
+            } else {
+
+            }
+        }
 
         int insertOrder(int direction, int price, int orderID, int size, double time) {
             
             // Same logic as v1
-            Order* newOrder = new Order{orderID, time, size, nullptr, nullptr, nullptr};            // !!!!!!!!!!!!!! REMEMBER TO CLEAN !!!!!!!!!!!!!!
+            Order* newOrder = new Order{orderID, time, size, price, nullptr, nullptr, nullptr};            // !!!!!!!!!!!!!! REMEMBER TO CLEAN !!!!!!!!!!!!!!
             int process = executeOrder(newOrder, price, direction);
             if(process == 2) {return 1;}
 
