@@ -35,3 +35,5 @@ g++ -O3 -o benchmark.exe benchmark.cpp
 # Verbose compilation argument
 g++ -DVERBOSE -O3 -o benchmark.exe benchmark.cpp
 ```
+
+To switch to and test other versions, go to ``benchmark.cpp`` and update the included header files (v1.0 must always be included for validation to work) to the intended version, before uncommenting the relevant ``LOBVXXX lobook;`` object around line 30. You may also change the number of messages to be parsed, number of times the LOB runs to measure average throughput and the seed used to generate synthetic messages just above this.

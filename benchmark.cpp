@@ -23,8 +23,11 @@ int  main() {
     // INITIALISING
     //---------------------------------------------------------------------------------------
     int numMessages = 10'000'000;
+    int seed = 42;
+    int numIterations = 5;
+    
     std::cout << "Generating messages...";
-    auto messageQ = Utils::generateSyntheticMessages(numMessages, 42);
+    auto messageQ = Utils::generateSyntheticMessages(numMessages, seed);
     std::cout<< "\nMessages Generated.\n---\n";
 
     //LOBV1 lobook;
@@ -42,7 +45,6 @@ int  main() {
     std::cout << "Book validated\n";
 
     lobook.clearBook();
-    int numIterations = 5;
 
     // Verbose message vector construction, for smaller test cases
     LOGN(
