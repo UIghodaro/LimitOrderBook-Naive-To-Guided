@@ -47,6 +47,7 @@ class LOBV2 : public book{
         std::unordered_map<int, Price*> buyPrices;
         std::unordered_map<int, Order*> orderMap;
 
+        // COMPLETE
         // InOrder traversal via iteration, I admit I consulted geeksforgeeks for this
         std::string traversePrint(Price* root) {
             std::string output = "";
@@ -88,6 +89,7 @@ class LOBV2 : public book{
 
 
     public:
+        // TBC: IMPLEMENT TREE BALANCING, THEN MAKE THIS COMPILE 
         int executeOrder(Order* ord, int price, int direction) {
             int executed = 1;
 
@@ -133,6 +135,7 @@ class LOBV2 : public book{
             }
         }
 
+        // COMPLETE
         int insertOrder(int direction, int price, int orderID, int size, double time) {
             
             // Same logic as v1
@@ -178,14 +181,17 @@ class LOBV2 : public book{
             return 0;
         }
 
+        // TBC: TS JUST AIN'T BEEN TOUCH HAHAHA
         int cancelOrder(int direction, int orderID, int size, int TOTAL) { return 2; }
 
+        // COMPLETE AS FAR AS I CURRENTLY KNOW
         void clearBook() {
             buyTree = nullptr; sellTree = nullptr; 
             lowestSell = nullptr; highestBuy = nullptr;
             sellPrices.clear(); buyPrices.clear(); orderMap.clear();
         }
 
+        // COMPLETE
         // InOrder traversal via iteration, I admit I consulted geeksforgeeks for this
         std::string currentBook() {
             // Buy Tree parsing initialisation
