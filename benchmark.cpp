@@ -6,6 +6,7 @@
 #include <chrono>
 #include <algorithm>
 #include <iomanip>
+#include <string_view>
 
 #include "utils/Logging.hpp"
 #include "utils/Utilities.hpp"
@@ -18,7 +19,9 @@
 //#include "versions/v2/v2_0.hpp"
 
 
-int  main() {
+int  main(int argc, char* argv[]) {
+    bool validateOnly = argc > 1 && std::string_view(argv[1]) == "--validate-only";
+
     //---------------------------------------------------------------------------------------
     // INITIALISING
     //---------------------------------------------------------------------------------------
@@ -42,7 +45,7 @@ int  main() {
         std::cerr << "Book validation failed - invalid book logic found\n";
         return 1;
     }
-    std::cout << "Book validated\n";
+    std::cout << "Book validated\n"; if(validateOnly) {return 0;}
 
     lobook.clearBook();
 

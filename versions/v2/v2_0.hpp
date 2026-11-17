@@ -182,6 +182,13 @@ class LOBV2 : public book{
         }
 
         // TBC: TS JUST AIN'T BEEN TOUCH HAHAHA
+        // in an ideal world this is done as:
+        //      - Overall? Go to the price point on a tree and then dereference the specific order
+        //      - Specifically, 1. Use orderID to get the order object from OrderMap
+        //      - 2. use the order object to first check if the cancel would result in an empty price point:
+        //          -> IF NO, AND TOTAL then set order->prev = order->next (remove its internal node reference and therefore tree reference), remove the order from the order map (remove its global reference) and then delete the object (Memory management, don't segfault), this is O(1)!
+        //          -> IF NO, AND !TOTAL then just modify the size, O(1) amen      
+        //          -> IF YES, wait how would you deal with merging tree branches? This isn't today's goal but deffo smn to dwell on
         int cancelOrder(int direction, int orderID, int size, int TOTAL) { return 2; }
 
         // COMPLETE AS FAR AS I CURRENTLY KNOW
