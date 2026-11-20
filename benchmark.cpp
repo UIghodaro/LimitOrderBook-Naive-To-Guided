@@ -38,7 +38,7 @@ int  main(int argc, char* argv[]) {
     LOBV1_75 lobook;
     //LOBV2 lobook;
     
-    std::cout<<"Instantiating and validating book " << typeid(lobook).name() << " ...\n";
+    std::cout<<"Instantiating and validating book " << typeid(lobook).name() << "...\n";
 
     auto validation = Utils::validateBook(lobook);
     if (!validation) {

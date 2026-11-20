@@ -72,7 +72,7 @@ class LOBV2 : public book{
                             ", sz: " + std::to_string(nxtOrder->size) + 
                             ", tm: " + std::to_string(nxtOrder->time) + "], ";
 
-                    nxtOrder = nxtOrder->nextOrder;
+                    nxtOrder = nxtOrder->next;
                 }
 
                 output += std::to_string(curr->limitPrice) + ":" + (convrt) + "\n-\n";
@@ -91,7 +91,7 @@ class LOBV2 : public book{
     public:
         // TBC: IMPLEMENT TREE BALANCING, THEN MAKE THIS COMPILE 
         int executeOrder(Order* ord, int price, int direction) {
-            int executed = 1;
+            /*int executed = 1;
 
             if (direction == 1) {
                 if(lowestSell == nullptr || price < lowestSell->limitPrice) {return 0;}
@@ -132,7 +132,8 @@ class LOBV2 : public book{
 
             } else {
 
-            }
+            } */
+           return 1;
         }
 
         // COMPLETE
@@ -149,8 +150,8 @@ class LOBV2 : public book{
             if(lookupMap[price] != nullptr) {               // If price level exists - O(1)
                 Order* priceTailPtr = lookupMap[price]->tailOrder;
 
-                priceTailPtr->nextOrder = newOrder;         // Provide a link from the current end of the list to this order
-                newOrder->prevOrder = priceTailPtr;          // Provide a link from the order back to the list (double linkage)
+                priceTailPtr->next = newOrder;         // Provide a link from the current end of the list to this order
+                newOrder->prev = priceTailPtr;         // Provide a link from the order back to the list (double linkage)
                 lookupMap[price]->tailOrder = newOrder;     // Update so that the tail is now the newly inserted order
 
             } else {                                        // If price level is not already in tree - traverse and place O(log M) where M is the number of price levels in the tree
