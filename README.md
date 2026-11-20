@@ -1,4 +1,7 @@
 ## Limit Order Book - Naive-to-Guided
+
+![CI](https://github.com/UIghodaro/LimitOrderBook-Naive-To-Guided/actions/workflows/ci.yml/badge.svg)
+
 **Summary**: A price matching orderbook project iterated over different stages. Version 1 is created using minimal online guidance/pointers (the main guidance was the definition of what an LOB is and what it should do) while version 2 is based on a recommended structure online. Future iterations will be further guided by online guides/recommendations. 
 
 ### Motivation
@@ -23,6 +26,7 @@ Main file structure:
 # For Mac/Linux devices
 g++ -O3 -o benchmark.out benchmark.cpp
 ./benchmark.out
+# OR `./benchmark.out --validation-only` to just run the validation suite
 
 # Verbose compilation argument
 g++ -DVERBOSE -O3 -o benchmark.out benchmark.cpp
@@ -31,9 +35,15 @@ g++ -DVERBOSE -O3 -o benchmark.out benchmark.cpp
 # For windows devices
 g++ -O3 -o benchmark.exe benchmark.cpp
 ./benchmark.exe
+# OR `./benchmark.exe --validation-only` to just run the validation suite
 
 # Verbose compilation argument
 g++ -DVERBOSE -O3 -o benchmark.exe benchmark.cpp
+```
+```bash
+# Running the validation suite only using docker
+docker build -t lob .
+docker run lob # runs the validation suite, exit code 0 means all tests pass
 ```
 
 To switch to and test other versions, go to ``benchmark.cpp`` and update the included header files (v1.0 must always be included for validation to work) to the intended version, before uncommenting the relevant ``LOBVXXX lobook;`` object around line 30. You may also change the number of messages to be parsed, number of times the LOB runs to measure average throughput and the seed used to generate synthetic messages just above this.
